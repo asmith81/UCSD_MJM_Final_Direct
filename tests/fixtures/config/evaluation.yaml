@@ -1,0 +1,11 @@
+evaluation:
+  metrics:
+    - "accuracy"
+    - "precision"
+    - "recall"
+  dataset:
+    path: "data/test"
+    split: "test"
+  output:
+    format: "json"
+    path: "results" 

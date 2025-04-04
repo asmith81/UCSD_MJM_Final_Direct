@@ -1,0 +1,27 @@
+prompt:
+  config_info:
+    name: "detailed_prompts"
+    description: "Detailed prompts with additional context and field information"
+    version: "1.0"
+    last_updated: "2025-03-12"
+
+  prompts:
+    - name: "detailed_work_order"
+      text: "This is an invoice image. Please find and extract the work order number."
+      category: "detailed"
+      field_to_extract: "work_order"
+      description: "Detailed prompt providing multiple possible field labels."
+      version: "1.0"
+      metadata:
+        source: "field_label_variations"
+        rationale: "Providing multiple possible labels helps the model identify the correct field"
+
+    - name: "detailed_cost"
+      text: "Find the total amount due on this invoice."
+      category: "detailed"
+      field_to_extract: "cost"
+      description: "Detailed prompt specifying possible labels for the total cost."
+      version: "1.0"
+      metadata:
+        source: "field_label_variations"
+        rationale: "Multiple label options help identify the correct field" 

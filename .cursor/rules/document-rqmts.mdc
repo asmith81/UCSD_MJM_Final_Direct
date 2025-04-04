@@ -1,0 +1,27 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+## Documentation Requirements
+
+### Class Documentation
+- Every class must have a docstring explaining:
+  - Purpose of the class
+  - Responsibilities
+  - Dependencies
+  - Example usage (if not trivial)
+
+### Method Documentation
+- Every public method must have a docstring explaining:
+  - Purpose of the method
+  - Parameters (with types and descriptions)
+  - Return value (with type and description)
+  - Exceptions raised (if any)
+  - Example usage (for complex methods)
+
+### Module Documentation
+- Every module must have a docstring explaining:
+  - Purpose of the module
+  - Classes/functions contained
+  - Usage examples (if appropriate)

@@ -1,0 +1,20 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+## Quality Assurance
+
+### Code Quality
+- Maintain consistent style throughout
+- Follow all naming conventions
+- Document all public classes and methods
+- Keep functions small and focused
+- Avoid code duplication
+
+### Testing Approach
+- Test critical components individually
+- Verify end-to-end workflows with small test datasets
+- Include challenging invoices in the test set
+- Document testing approach
+- Handle edge cases appropriately

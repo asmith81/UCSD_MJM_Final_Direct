@@ -1,0 +1,152 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+ ---
+description: Interface and Factory Pattern Requirements
+globs: ["src/**/*.py"]
+alwaysApply: true
+---
+
+## Interface and Factory Pattern Requirements
+
+### 1. Interface Definition
+- Every major component must have a corresponding abstract base class (ABC)
+- Interfaces must be defined in a dedicated file named `base_*.py` (e.g., `base_model.py`, `base_config.py`)
+- Interfaces must be documented with:
+  - Clear purpose and responsibilities
+  - Method signatures with type hints
+  - Expected behavior and return values
+  - Error conditions and exceptions
+- Example:
+  ```python
+  from abc import ABC, abstractmethod
+  from typing import Any, Dict
+
+  class BaseComponent(ABC):
+      """Base interface for all component implementations."""
+      
+      @abstractmethod
+      def initialize(self, config: BaseConfig) -> None:
+          """Initialize the component with configuration.
+          
+          Args:
+              config: Component configuration
+              
+          Raises:
+              InitializationError: If initialization fails
+          """
+          pass
+  ```
+
+### 2. Factory Implementation
+- Every interface must have a corresponding factory class
+- Factories must be named `*Factory` (e.g., `ModelFactory`, `ConfigFactory`)
+- Factories must:
+  - Be located in a dedicated file named `*_factory.py`
+  - Use dependency injection for dependencies
+  - Maintain a registry of implementations
+  - Provide a clear creation method
+  - Support registration of new implementations
+- Example:
+  ```python
+  class ComponentFactory:
+      """Factory for creating component instances."""
+      
+      # Registry of available implementations
+      REGISTRY: Dict[str, Type[BaseComponent]] = {
+          "default": DefaultComponent,
+          "advanced": AdvancedComponent
+      }
+      
+      def create_component(self, component_type: str, config: BaseConfig) -> BaseComponent:
+          """Create a component instance.
+          
+          Args:
+              component_type: Type of component to create
+              config: Component configuration
+              
+          Returns:
+              BaseComponent: The created component instance
+          """
+          if component_type not in self.REGISTRY:
+              raise ValueError(f"Unsupported component type: {component_type}")
+          return self.REGISTRY[component_type](config)
+  ```
+
+### 3. Implementation Requirements
+- All implementations must:
+  - Inherit from their corresponding base interface
+  - Be located in an `implementations` subdirectory
+  - Implement all abstract methods
+  - Follow the interface contract exactly
+  - Be registered with their factory
+- Example:
+  ```python
+  from .base_component import BaseComponent
+  
+  class DefaultComponent(BaseComponent):
+      """Default implementation of BaseComponent."""
+      
+      def initialize(self, config: BaseConfig) -> None:
+          # Implementation details
+          pass
+  ```
+
+### 4. Configuration Integration
+- All components must accept configuration through their base interface
+- Configuration must be validated before use
+- Configuration must be type-safe and documented
+- Example:
+  ```python
+  class ComponentConfig(BaseConfig):
+      """Configuration for component implementations."""
+      
+      def validate(self) -> bool:
+          # Validation logic
+          return True
+  ```
+
+### 5. Testing Requirements
+- All interfaces must have corresponding test files
+- Tests must verify:
+  - Interface contract compliance
+  - Factory creation behavior
+  - Configuration validation
+  - Error handling
+- Example:
+  ```python
+  def test_component_interface():
+      """Test that all component implementations have required methods."""
+      for component_class in [DefaultComponent, AdvancedComponent]:
+          assert hasattr(component_class, 'initialize')
+          assert hasattr(component_class, 'process')
+  ```
+
+### 6. Documentation Requirements
+- All interfaces must be documented in the Interface Control Document (ICD)
+- Documentation must include:
+  - Interface purpose and scope
+  - Method signatures and behaviors
+  - Error conditions
+  - Usage examples
+  - Implementation requirements
+
+### 7. Error Handling
+- All interfaces must define clear error conditions
+- Errors must be specific and documented
+- Error handling must be consistent across implementations
+- Example:
+  ```python
+  class ComponentError(Exception):
+      """Base exception for component-related errors."""
+      pass
+  ```
+
+### 8. Version Control
+- Interface changes must be:
+  - Documented in the ICD
+  - Versioned appropriately
+  - Backward compatible when possible
+  - Clearly communicated to all developers

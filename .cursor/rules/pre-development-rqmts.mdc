@@ -1,0 +1,11 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+
+## IMPORTANT: Pre-Development Requirements
+- Review the Project Overview & Plan document completely before writing any code
+- Study the System Architecture document to understand component relationships
+- Consult the Project Directory Structure document to maintain proper organization
+- Refer to this rules document when making any implementation decisions

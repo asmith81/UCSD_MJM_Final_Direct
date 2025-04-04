@@ -1,0 +1,59 @@
+---
+description: Core Architectural Principles
+globs: ["src/**/*.py"]
+alwaysApply: true
+---
+
+## Core Architectural Principles
+
+### 1. Simplicity and Clarity
+- Keep all implementations as simple and direct as possible
+- Favor explicit over implicit code
+- Prioritize readability over cleverness
+- Maintain a clean, consistent style throughout the codebase
+
+### 2. Code Constraints
+- Maximum 550 lines per file - NO EXCEPTIONS
+- Maximum 100 characters per line
+- Maximum 25 lines per function/method
+- Maximum 5 arguments per function
+- Maximum 3 levels of nesting in any function
+
+### 3. Separation of Concerns
+- Each class must have a single, well-defined responsibility
+- Each module must have a clear purpose
+- Avoid mixing concerns (e.g., data loading and model inference)
+- Create boundaries between system components
+- Components should be able to evolve independently
+
+### 4. Interface-Based Design
+- Define clear interfaces (abstract base classes or protocols) for all major components
+- Depend on abstractions, not concrete implementations
+- Use dependency injection to provide implementations
+- Create factory classes for object creation
+- Document interfaces thoroughly with expected behavior
+- Example:
+  ```python
+  # Good
+  class BaseModel(ABC):
+      @abstractmethod
+      def process(self, input: Any) -> Any:
+          pass
+
+  class ModelFactory:
+      def create_model(self, config: BaseConfig) -> BaseModel:
+          pass
+
+  # Bad
+  class SpecificModel:
+      def process(self, input: Any) -> Any:
+          pass
+  ```
+
+### 5. Dependency Injection
+- Dependencies should be passed explicitly to constructors
+- Never use global state or singletons
+- Make dependencies visible and traceable in code
+- Use interface-based programming where appropriate
+- Document dependencies clearly in class docstrings
+

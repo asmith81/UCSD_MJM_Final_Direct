@@ -1,0 +1,33 @@
+from setuptools import setup, find_packages
+
+setup(
+    name="invoice-extraction-comparison",
+    version="0.1.0",
+    packages=find_packages(),
+    install_requires=[
+        "torch>=2.1.0",
+        "torchvision>=0.16.0",
+        "transformers>=4.50.3",
+        "Pillow>=9.3.0",
+        "PyYAML>=6.0.1",
+        "pandas>=2.2.3",
+        "numpy>=1.24.1",
+        "jupyter>=1.0.0",
+        "matplotlib>=3.10.1",
+        "seaborn>=0.13.2",
+        "pydantic>=2.6.1",
+        "typing-extensions>=4.9.0",
+        "mypy>=1.8.0",
+        "scikit-learn>=1.3.2",
+        "scipy>=1.15.2",
+        "tqdm>=4.67.1",
+        "pytest>=8.0.0",
+        "pytest-cov>=4.1.0",
+        "black>=24.1.1",
+        "flake8>=7.0.0",
+        "isort>=5.13.2",
+        "sphinx>=7.2.6",
+        "sphinx-rtd-theme>=2.0.0",
+        "nbsphinx>=0.9.3",
+    ],
+) 

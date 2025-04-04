@@ -1,0 +1,34 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+## Component-Specific Rules
+
+### Configuration Management
+- All configuration should be in YAML files
+- No hardcoded configuration values in code
+- Validate configuration on loading
+- Provide sensible defaults where appropriate
+- Document all configuration options
+
+### Model Management
+- Use factory pattern for model creation
+- Ensure consistent interface across all models
+- Handle resources appropriately (load/unload)
+- Document model capabilities and limitations
+- Clear separation between model and inference logic
+
+### Prompt Management
+- Use template pattern for prompt generation
+- Document prompt strategies clearly
+- Ensure prompts are configurable via YAML
+- Keep prompt logic separate from model logic
+- Version prompt templates explicitly
+
+### Evaluation Framework
+- Clearly define all metrics
+- Consistent evaluation across all models/prompts
+- Document evaluation methodology
+- Store results in standardized format
+- Provide clear visualizations of results

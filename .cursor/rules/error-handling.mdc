@@ -1,0 +1,19 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+## Error Handling
+
+### Error Principles
+- Validate all inputs at the boundaries
+- Fail fast and explicitly
+- Use appropriate exception types
+- Provide clear error messages
+- Clean up resources in case of errors
+
+### Exception Guidelines
+- Create custom exceptions for domain-specific errors
+- Use built-in exceptions for standard errors
+- Document exceptions in method docstrings
+- Handle exceptions at appropriate levels

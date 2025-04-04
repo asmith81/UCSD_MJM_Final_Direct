@@ -1,0 +1,169 @@
+# Project To-Do: LMM Invoice Data Extraction Comparison
+
+This to-do list is organized in sequential implementation order by phases and sub-phases. Each task is designed to be a focused prompt for an LLM to implement. Complete each phase before moving to the next.
+
+## Phase 1: Project Setup and Foundation
+
+### 1.A: Project Structure and Configuration ✓
+- [x] 1.1 Initialize project repository with directory structure
+- [x] 1.2 Create README.md with project overview and setup instructions
+- [x] 1.3 Create requirements.txt with initial dependencies
+- [x] 1.4 Implement ConfigLoader class to load YAML configurations
+      - Implemented with dependency injection
+      - Added comprehensive test suite (97% coverage)
+      - Created ConfigParser protocol and YAMLConfigParser
+- [x] 1.5 Define base configuration structures
+      - BaseConfig interface
+      - ModelConfig implementation
+      - PromptConfig implementation
+      - EvaluationConfig implementation
+- [x] 1.6 Create sample configuration YAML files for models and prompts
+      - Model configuration templates
+      - Prompt configuration templates
+      - Evaluation configuration templates
+
+Section completed with all requirements satisfied and following architectural principles:
+- Interface-based design
+- Dependency injection
+- Comprehensive testing
+- Clear separation of concerns
+
+### 1.B: Data Management
+- [ ] 1.7 Implement DataLoader class to load images and ground truth CSV
+- [ ] 1.8 Implement GroundTruthManager to parse and validate ground truth data
+- [ ] 1.9 Implement ImageProcessor for basic image preprocessing
+- [ ] 1.10 Create utility functions for data validation and visualization
+- [ ] 1.11 Write data loading notebook to verify data pipeline works correctly
+
+## Phase 2: Model Integration
+
+### 2.A: Model Framework
+- [ ] 2.1 Define BaseModel abstract class with standard interface
+- [ ] 2.2 Implement ModelFactory for creating model instances
+- [ ] 2.3 Create OutputParser for extracting structured data from model outputs
+- [ ] 2.4 Implement error handling for model loading and inference
+- [ ] 2.5 Create model configuration validation utilities
+
+### 2.B: Model Implementations
+- [ ] 2.6 Implement PixtralModel class for Pixtral-12B model
+- [ ] 2.7 Implement LlamaVisionModel class for Llama-3.2-11B-Vision model
+- [ ] 2.8 Implement DoctrModel class for Doctr model
+- [ ] 2.9 Create model-specific output parsing functions
+- [ ] 2.10 Write model loading notebook to verify model framework works correctly
+
+## Phase 3: Prompt Management
+
+### 3.A: Prompt Framework
+- [ ] 3.1 Define BasePromptGenerator abstract class with standard interface
+- [ ] 3.2 Implement PromptFactory for creating prompt generators
+- [ ] 3.3 Create PromptFormatter for model-specific prompt formatting
+- [ ] 3.4 Implement prompt template loading and validation
+- [ ] 3.5 Create utility functions for prompt visualization
+
+### 3.B: Prompt Implementations
+- [ ] 3.6 Implement BasicPromptGenerator for direct extraction prompts
+- [ ] 3.7 Implement DetailedPromptGenerator for detailed instruction prompts
+- [ ] 3.8 Implement FewShotPromptGenerator for few-shot example prompts
+- [ ] 3.9 Implement StepByStepPromptGenerator for guided extraction prompts
+- [ ] 3.10 Implement LocationalPromptGenerator for spatial location prompts
+- [ ] 3.11 Write prompt testing notebook to verify prompt framework works correctly
+
+## Phase 4: Evaluation Framework
+
+### 4.A: Evaluation Components
+- [ ] 4.1 Implement MetricsCalculator for accuracy and CER metrics
+- [ ] 4.2 Implement EvaluationService to orchestrate evaluation
+- [ ] 4.3 Create ResultsManager for saving and loading results
+- [ ] 4.4 Implement result validation and normalization utilities
+- [ ] 4.5 Create standard result format definitions
+
+### 4.B: Visualization and Analysis
+- [ ] 4.6 Implement VisualizationService for creating visualizations
+- [ ] 4.7 Create ComparisonPlotter for model/prompt comparisons
+- [ ] 4.8 Implement ResultsTable for tabular result display
+- [ ] 4.9 Create utility functions for error analysis
+- [ ] 4.10 Write evaluation testing notebook to verify metrics calculation
+
+## Phase 5: Integration and Initial Testing
+
+### 5.A: Experiment Notebook Template
+- [ ] 5.1 Create experiment_template.ipynb with standardized structure
+- [ ] 5.2 Implement end-to-end workflow in template
+- [ ] 5.3 Add configuration options and parameter selection
+- [ ] 5.4 Create basic result visualization in notebook
+- [ ] 5.5 Test template with a single model/prompt combination
+
+### 5.B: Analysis Notebook
+- [ ] 5.6 Create results_analysis.ipynb for aggregating results
+- [ ] 5.7 Implement result loading and merging functions
+- [ ] 5.8 Create comparative visualizations across models and prompts
+- [ ] 5.9 Implement error analysis components
+- [ ] 5.10 Test analysis notebook with sample results
+
+## Phase 6: MVP Evaluation
+
+### 6.A: Initial Model Experiments
+- [ ] 6.1 Create experiment notebooks for Pixtral-12B with different prompts
+- [ ] 6.2 Create experiment notebooks for Llama-3.2-11B-Vision with different prompts
+- [ ] 6.3 Create experiment notebooks for Doctr with different prompts
+- [ ] 6.4 Run experiments on initial 20-image dataset
+- [ ] 6.5 Collect and save results from all experiments
+
+### 6.B: Initial Analysis and Refinement
+- [ ] 6.6 Run analysis notebook on initial results
+- [ ] 6.7 Identify and fix any issues with models or prompts
+- [ ] 6.8 Refine evaluation metrics if needed
+- [ ] 6.9 Document initial findings and observations
+- [ ] 6.10 Prepare for expanded evaluation
+
+## Phase 7: Expanded Evaluation
+
+### 7.A: Full Dataset Experiments
+- [ ] 7.1 Expand dataset to ~150 images
+- [ ] 7.2 Update ground truth validation for expanded dataset
+- [ ] 7.3 Run experiments with best-performing model/prompt combinations
+- [ ] 7.4 Collect and save results from expanded experiments
+- [ ] 7.5 Verify result consistency across dataset sizes
+
+### 7.B: Final Analysis and Documentation
+- [ ] 7.6 Run analysis notebook on full results
+- [ ] 7.7 Create comprehensive performance comparisons
+- [ ] 7.8 Identify best-performing model/prompt combination
+- [ ] 7.9 Document findings and recommendations
+- [ ] 7.10 Prepare final presentation materials
+
+## Implementation Priorities
+
+1. **Core Framework First**: Build the foundational components before specific implementations
+2. **One Working Example**: Get a single model/prompt combination working end-to-end before adding more
+3. **Incremental Testing**: Test each component individually before integration
+4. **Documentation As You Go**: Document each component as it's implemented
+5. **Small, Focused Tasks**: Keep implementation tasks small and focused for easier LLM prompting
+
+## Implementation Notes for LLM Prompting
+
+When prompting an LLM to implement a task:
+
+1. Provide the exact class name and file location
+2. Reference relevant project rules (naming conventions, etc.)
+3. Specify required methods and interfaces
+4. Include example usage if helpful
+5. Mention dependencies and relationships with other components
+6. Request proper documentation and error handling
+
+Example prompt format:
+```
+Implement the ConfigLoader class in src/config/config_loader.py according to the project rules.
+This class should load and validate YAML configuration files.
+
+Required methods:
+- __init__(self, config_path)
+- load(self) -> Config
+- validate(self, config) -> bool
+
+Dependencies:
+- Uses PyYAML for loading YAML files
+- Returns appropriate Config objects (ModelConfig, PromptConfig, etc.)
+
+Include proper error handling and documentation.
+```

@@ -1,0 +1,20 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+## Notebook Rules
+
+### Structure
+- Each notebook must be self-contained
+- Clear separation between configuration and execution
+- Standard sections: imports, configuration, execution, results
+- No business logic in notebooks
+- Results should be saved to disk in standardized format
+
+### Style
+- Use markdown cells for section headers
+- Keep code cells short and focused
+- Include comments explaining complex operations
+- Use standard variable names across notebooks
+- Clean up resources explicitly when done

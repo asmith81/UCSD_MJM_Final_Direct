@@ -1,0 +1,416 @@
+# Interface Control Document (ICD)
+
+## Overview
+This document defines the interfaces and interactions between major components of the LMM Invoice Data Extraction Comparison system. It serves as the authoritative source for interface specifications and component interactions.
+
+## 1. Configuration System ✓
+
+### 1.1 Base Configuration Interface
+```python
+from abc import ABC, abstractmethod
+from typing import Any, Dict
+
+class BaseConfig(ABC):
+    """Base interface for all configuration implementations."""
+    
+    @abstractmethod
+    def get_data(self) -> Dict[str, Any]:
+        """Get the configuration data.
+        
+        Returns:
+            Dict[str, Any]: The configuration data
+        """
+        pass
+```
+
+### 1.2 Configuration Parser Protocol
+```python
+from typing import Protocol
+from pathlib import Path
+from typing import Dict, Any
+
+class ConfigParser(Protocol):
+    """Protocol defining the interface for configuration parsers."""
+    
+    def load(self, file_path: Path) -> Dict[str, Any]:
+        """Load configuration from a file.
+        
+        Args:
+            file_path: Path to the configuration file
+            
+        Returns:
+            Dict[str, Any]: The parsed configuration data
+            
+        Raises:
+            FileNotFoundError: If the file doesn't exist
+            ValueError: If the file cannot be parsed
+        """
+        ...
+```
+
+### 1.3 Configuration Factory
+```python
+from typing import Dict, Type
+from src.config.base_config import BaseConfig
+
+class ConfigFactory:
+    """Factory for creating configuration objects."""
+    
+    def create_model_config(self, data: Dict[str, Any]) -> BaseConfig:
+        """Create a model configuration instance."""
+        pass
+    
+    def create_prompt_config(self, data: Dict[str, Any]) -> BaseConfig:
+        """Create a prompt configuration instance."""
+        pass
+    
+    def create_evaluation_config(self, data: Dict[str, Any]) -> BaseConfig:
+        """Create an evaluation configuration instance."""
+        pass
+```
+
+### 1.4 Configuration Loader
+```python
+from pathlib import Path
+from typing import Optional
+from src.config.base_config import BaseConfig
+
+class ConfigLoader:
+    """Loads and manages configuration files."""
+    
+    def __init__(
+        self,
+        config_path: Path,
+        config_factory: ConfigFactory,
+        config_parser: Optional[ConfigParser] = None
+    ) -> None:
+        """Initialize the configuration loader.
+        
+        Args:
+            config_path: Base path for configuration files
+            config_factory: Factory for creating config objects
+            config_parser: Parser for loading config files (optional)
+        """
+        pass
+    
+    def load_model_config(self, model_name: str) -> BaseConfig:
+        """Load model configuration."""
+        pass
+    
+    def load_prompt_config(self, prompt_name: str) -> BaseConfig:
+        """Load prompt configuration."""
+        pass
+    
+    def load_evaluation_config(self) -> BaseConfig:
+        """Load evaluation configuration."""
+        pass
+```
+
+## 2. Model System (In Progress)
+
+### 2.1 Base Model Interface
+```python
+from abc import ABC, abstractmethod
+from typing import Any, Dict
+from src.config.base_config import BaseConfig
+
+class BaseModel(ABC):
+    """Base interface for all model implementations."""
+    
+    @abstractmethod
+    def initialize(self, config: BaseConfig) -> None:
+        """Initialize the model with configuration.
+        
+        Args:
+            config: Model configuration
+            
+        Raises:
+            InitializationError: If initialization fails
+        """
+        pass
+    
+    @abstractmethod
+    def process_image(self, image_path: Path) -> Dict[str, Any]:
+        """Process an invoice image.
+        
+        Args:
+            image_path: Path to the invoice image
+            
+        Returns:
+            Dict[str, Any]: Extracted information
+            
+        Raises:
+            ProcessingError: If processing fails
+        """
+        pass
+```
+
+### 2.2 Model Factory
+```python
+from typing import Dict, Type
+from src.models.base_model import BaseModel
+from src.config.base_config import BaseConfig
+
+class ModelFactory:
+    """Factory for creating model instances."""
+    
+    REGISTRY: Dict[str, Type[BaseModel]] = {}
+    
+    def create_model(self, model_type: str, config: BaseConfig) -> BaseModel:
+        """Create a model instance.
+        
+        Args:
+            model_type: Type of model to create
+            config: Model configuration
+            
+        Returns:
+            BaseModel: The created model instance
+            
+        Raises:
+            ValueError: If model_type is not supported
+        """
+        pass
+```
+
+## 3. Prompt System (In Progress)
+
+### 3.1 Base Prompt Generator Interface
+```python
+from abc import ABC, abstractmethod
+from typing import Dict, Any
+from src.config.base_config import BaseConfig
+
+class BasePromptGenerator(ABC):
+    """Base interface for prompt generators."""
+    
+    @abstractmethod
+    def initialize(self, config: BaseConfig) -> None:
+        """Initialize the prompt generator."""
+        pass
+    
+    @abstractmethod
+    def generate_prompt(self, context: Dict[str, Any]) -> str:
+        """Generate a prompt from context."""
+        pass
+```
+
+## 4. Evaluation System (In Progress)
+
+### 4.1 Evaluation Service Interface
+```python
+from abc import ABC, abstractmethod
+from typing import Dict, Any, List
+from pathlib import Path
+
+class EvaluationService(ABC):
+    """Interface for evaluation services."""
+    
+    @abstractmethod
+    def evaluate_model(
+        self,
+        model: BaseModel,
+        test_images: List[Path],
+        ground_truth: Dict[str, Any]
+    ) -> Dict[str, Any]:
+        """Evaluate a model's performance."""
+        pass
+```
+
+## Component Interaction Rules
+
+1. **Configuration Flow**
+   - All components must accept configuration through their interfaces
+   - Configuration must be validated before use
+   - Components must not modify their configuration after initialization
+
+2. **Dependency Injection**
+   - All dependencies must be passed explicitly through constructors
+   - No global state or singletons
+   - Use factory pattern for object creation
+
+3. **Error Handling**
+   - Components must define their error conditions
+   - Errors must be properly typed and documented
+   - Components must clean up resources on error
+
+4. **Testing Requirements**
+   - All interfaces must have corresponding test files
+   - Tests must verify interface compliance
+   - Use mock objects for testing dependencies
+
+## Version History
+
+### v1.0 (Current)
+- Completed Configuration System implementation
+- Defined base interfaces for Models, Prompts, and Evaluation
+- Established component interaction rules
+
+## 5. Data Interfaces
+
+### 5.1 Data Loader Interface
+
+```python
+class DataLoader:
+    """Loader for input data."""
+    
+    def load_images(self, image_dir: str) -> List[Image.Image]:
+        """Load images from directory.
+        
+        Args:
+            image_dir: Directory containing images
+            
+        Returns:
+            List[Image.Image]: Loaded images
+        """
+        pass
+    
+    def load_ground_truth(self, csv_path: str) -> Dict[str, Dict[str, Any]]:
+        """Load ground truth data from CSV.
+        
+        Args:
+            csv_path: Path to CSV file
+            
+        Returns:
+            Dict[str, Dict[str, Any]]: Ground truth data
+        """
+        pass
+```
+
+## 6. Interface Interactions
+
+### 6.1 Configuration Flow
+
+1. `ConfigLoader` loads YAML files
+2. `ConfigFactory` creates appropriate configuration objects
+3. Configuration objects are validated
+4. Validated configurations are passed to components
+
+### 6.2 Model Processing Flow
+
+1. `DataLoader` loads input images and ground truth
+2. `BaseModel` processes images using configuration
+3. `BasePromptGenerator` generates prompts based on context
+4. `EvaluationService` evaluates results against ground truth
+
+## 7. Error Handling
+
+### 7.1 Custom Exceptions
+
+```python
+class ConfigValidationError(Exception):
+    """Raised when configuration validation fails."""
+    pass
+
+class ConfigLoadError(Exception):
+    """Raised when configuration loading fails."""
+    pass
+
+class ModelInitializationError(Exception):
+    """Raised when model initialization fails."""
+    pass
+
+class ModelProcessingError(Exception):
+    """Raised when model processing fails."""
+    pass
+```
+
+## 8. Version Control
+
+This document should be updated whenever:
+- New interfaces are added
+- Existing interfaces are modified
+- Interface interactions change
+- Error handling is updated
+
+## 9. References
+
+- [Project Directory Structure](../project_planning/project-directory.md)
+- [Core Architectural Principles](../project_planning/core-architectural-principals.mdc)
+- [Development Guidelines](../project_planning/development-guidelines.md)
+
+## 10. Testing Guidelines
+
+### 10.1 Test Structure
+- One test file per component
+- Shared fixtures in conftest.py
+- Test data in fixtures directory
+- Clear test naming conventions
+
+### 10.2 Test Coverage
+- Minimum 80% coverage required
+- Critical paths must be tested
+- Edge cases must be covered
+- Error conditions must be tested
+
+### 10.3 Test Fixtures
+```python
+@pytest.fixture
+def temp_config_dir() -> Path:
+    """Create temporary directory for test configuration files."""
+    pass
+
+@pytest.fixture
+def config_factory() -> ConfigFactory:
+    """Create ConfigFactory instance for testing."""
+    pass
+
+@pytest.fixture
+def config_loader(temp_config_dir: Path, config_factory: ConfigFactory) -> ConfigLoader:
+    """Create ConfigLoader instance for testing."""
+    pass
+```
+
+### 10.4 Test Data
+- Use realistic test data
+- Include both valid and invalid cases
+- Document test data structure
+- Keep test data minimal but complete
+
+## 11. Configuration Guidelines
+
+### 11.1 YAML Structure
+- Clear hierarchy
+- Consistent naming
+- Documented fields
+- Type specifications
+
+### 11.2 Validation Rules
+- Required fields
+- Field types
+- Value ranges
+- Dependencies
+
+### 11.3 Error Messages
+- Clear and specific
+- Include context
+- Suggest solutions
+- Use consistent format
+
+### 11.4 Example Configuration Files
+```yaml
+# config/models/model_config.yaml
+model:
+  name: test_model
+  type: test_type
+  parameters:
+    param1: value1
+    param2: value2
+
+# config/prompts/prompt_config.yaml
+prompt:
+  type: test_type
+  template: test_template
+  parameters:
+    param1: value1
+    param2: value2
+
+# config/evaluation.yaml
+evaluation:
+  metrics:
+    - metric1
+    - metric2
+  dataset:
+    path: test_path
+  output:
+    format: json
+``` 

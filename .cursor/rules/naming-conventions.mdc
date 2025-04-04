@@ -1,0 +1,37 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+## Naming Conventions
+
+### Class Names
+- CamelCase for all class names
+- Descriptive, purpose-indicating names
+- Model classes: `[ModelName]Model` (e.g., `LlavaModel`)
+- Configuration classes: `[Component]Config` (e.g., `PromptConfig`)
+- Service classes: `[Purpose]Service` (e.g., `EvaluationService`)
+- Factory classes: `[Product]Factory` (e.g., `ModelFactory`)
+
+### Method Names
+- snake_case for all method names
+- Verb phrases describing actions
+- Initialization methods: `initialize_[resource]` (e.g., `initialize_model`)
+- Processing methods: `process_[data]` (e.g., `process_image`)
+- Evaluation methods: `evaluate_[metric]` (e.g., `evaluate_accuracy`)
+- Getter methods: `get_[attribute]` (e.g., `get_config`)
+
+### Variable and Parameter Names
+- snake_case for all variable and parameter names
+- Descriptive names indicating purpose and type
+- Configuration objects: `[component]_config` (e.g., `model_config`)
+- Service objects: `[service]_service` (e.g., `evaluation_service`)
+- Manager objects: `[resource]_manager` (e.g., `data_manager`)
+- Factory objects: `[product]_factory` (e.g., `model_factory`)
+
+### File Names
+- snake_case for all file names
+- Descriptive, purpose-indicating names
+- One class per file (with rare exceptions for small, related classes)
+- File name should match primary class name (converting CamelCase to snake_case)
+- Test files: `test_[module_name].py`
