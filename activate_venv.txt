@@ -1,0 +1,7 @@
+To activate the virtual environment in Cursor's terminal, run:
+
+.\.venv\Scripts\Activate.ps1
+
+If that doesn't work, use this alternative command:
+
+$env:VIRTUAL_ENV = (Resolve-Path ".\.venv").Path; $env:PATH = "$env:VIRTUAL_ENV\Scripts;$env:PATH" 

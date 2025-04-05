@@ -194,10 +194,39 @@ invoice-extraction-comparison/
       assert config.get_data()["name"] == "test_model"
   ```
 
-### Data Management (`data/`)
+### Data Management (`src/data/`) ✓
 - Clear separation between raw and processed data
 - Ground truth CSV paired with invoice images
 - All data files are gitignored
+- Completed interface-based design with `BaseDataLoader` abstract class
+- Implemented factory pattern with `DataLoaderFactory`
+- Added custom exceptions for error handling
+- Clear separation between interface and implementations
+- Comprehensive error handling and logging
+- Example usage:
+  ```python
+  from pathlib import Path
+  from src.data import DataLoaderFactory
+  
+  # Create data loader instance using factory
+  factory = DataLoaderFactory()
+  loader = factory.create_data_loader(
+      data_dir=Path("data/"),
+      image_dir=Path("data/images"),
+      ground_truth_file=Path("data/ground_truth.csv"),
+      cache_enabled=True
+  )
+  
+  # Get available invoice IDs
+  invoice_ids = loader.get_available_invoice_ids()
+  
+  # Load specific invoice data
+  image, ground_truth = loader.get_invoice_data("1017")
+  
+  # Access ground truth data
+  work_order = ground_truth["Work Order Number/Numero de Orden"]
+  total_cost = ground_truth["Total"]
+  ```
 
 ### Source Code (`src/`)
 - Organized by component responsibility

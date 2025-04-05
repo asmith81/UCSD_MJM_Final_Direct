@@ -245,35 +245,87 @@ class EvaluationService(ABC):
 - Defined base interfaces for Models, Prompts, and Evaluation
 - Established component interaction rules
 
-## 5. Data Interfaces
+## 5. Data Interfaces ✓
 
-### 5.1 Data Loader Interface
-
+### 5.1 Base Data Loader Interface
 ```python
-class DataLoader:
-    """Loader for input data."""
+from abc import ABC, abstractmethod
+from pathlib import Path
+from typing import Dict, Any, List, Tuple
+from PIL import Image
+import pandas as pd
+
+class BaseDataLoader(ABC):
+    """Base interface for data loading components."""
     
-    def load_images(self, image_dir: str) -> List[Image.Image]:
-        """Load images from directory.
-        
-        Args:
-            image_dir: Directory containing images
-            
-        Returns:
-            List[Image.Image]: Loaded images
-        """
+    @abstractmethod
+    def load_ground_truth(self) -> pd.DataFrame:
+        """Load the ground truth data from CSV."""
         pass
+        
+    @abstractmethod
+    def load_image(self, invoice_id: str) -> Image.Image:
+        """Load an invoice image by its ID."""
+        pass
+        
+    @abstractmethod
+    def get_available_invoice_ids(self) -> List[str]:
+        """Get a list of all available invoice IDs."""
+        pass
+        
+    @abstractmethod
+    def get_invoice_data(self, invoice_id: str) -> Tuple[Image.Image, pd.Series]:
+        """Get both the image and ground truth data for an invoice."""
+        pass
+        
+    @abstractmethod
+    def clear_cache(self) -> None:
+        """Clear any cached data."""
+        pass
+```
+
+### 5.2 Data Loader Factory
+```python
+from pathlib import Path
+from typing import Optional, Type, Dict
+
+class DataLoaderFactory:
+    """Factory for creating data loader instances."""
     
-    def load_ground_truth(self, csv_path: str) -> Dict[str, Dict[str, Any]]:
-        """Load ground truth data from CSV.
-        
-        Args:
-            csv_path: Path to CSV file
-            
-        Returns:
-            Dict[str, Dict[str, Any]]: Ground truth data
-        """
+    REGISTRY: Dict[str, Type[BaseDataLoader]] = {
+        "default": DataLoader
+    }
+    
+    @classmethod
+    def create_data_loader(
+        cls,
+        data_dir: Path,
+        loader_type: str = "default",
+        image_dir: Optional[Path] = None,
+        ground_truth_file: Optional[Path] = None,
+        cache_enabled: bool = True
+    ) -> BaseDataLoader:
+        """Create a data loader instance."""
         pass
+```
+
+### 5.3 Custom Exceptions
+```python
+class DataLoadError(Exception):
+    """Base exception for data loading errors."""
+    pass
+
+class GroundTruthError(DataLoadError):
+    """Raised when there is an error with ground truth data."""
+    pass
+
+class ImageLoadError(DataLoadError):
+    """Raised when there is an error loading an image."""
+    pass
+
+class DataValidationError(DataLoadError):
+    """Raised when data validation fails."""
+    pass
 ```
 
 ## 6. Interface Interactions

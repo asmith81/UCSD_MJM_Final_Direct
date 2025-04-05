@@ -118,7 +118,7 @@ invoice-extraction-comparison/
 │
 ├── src/                           # Source code
 │   ├── config/                    # Configuration system ✓
-│   ├── data/                     # Data handling (In Progress)
+│   ├── data/                     # Data handling ✓
 │   ├── models/                   # Model implementations (In Progress)
 │   ├── prompts/                  # Prompt management (In Progress)
 │   ├── evaluation/              # Evaluation framework (In Progress)
@@ -271,3 +271,47 @@ Current test coverage:
 - Original dataset providers
 - Model developers and maintainers
 - Open-source community contributors
+
+## Data Management System ✓
+
+The project uses a robust, interface-based data management system with dependency injection:
+
+1. **Base Data Loader Interface**:
+   - Abstract base class for all data loaders
+   - Type-safe data access methods
+   - Standardized error handling
+   - Clear interface contract
+
+2. **Data Loader Factory**:
+   - Creates data loader instances
+   - Supports multiple implementations
+   - Registry-based design
+   - Configuration through constructor
+
+3. **Error Handling**:
+   - Custom exception hierarchy
+   - Specific error types
+   - Comprehensive logging
+   - Resource cleanup
+
+Example usage:
+```python
+from pathlib import Path
+from src.data import DataLoaderFactory
+
+# Create data loader using factory
+factory = DataLoaderFactory()
+loader = factory.create_data_loader(
+    data_dir=Path("data/"),
+    image_dir=Path("data/images"),
+    ground_truth_file=Path("data/ground_truth.csv")
+)
+
+# Load and access data
+invoice_ids = loader.get_available_invoice_ids()
+image, ground_truth = loader.get_invoice_data("1017")
+
+# Access specific fields
+work_order = ground_truth["Work Order Number/Numero de Orden"]
+total_cost = ground_truth["Total"]
+```
