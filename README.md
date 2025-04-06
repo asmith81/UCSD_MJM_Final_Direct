@@ -272,46 +272,97 @@ Current test coverage:
 - Model developers and maintainers
 - Open-source community contributors
 
-## Data Management System ✓
+## Data Management ✓
 
-The project uses a robust, interface-based data management system with dependency injection:
+The project uses a robust data management system with proper dependency injection:
 
-1. **Base Data Loader Interface**:
-   - Abstract base class for all data loaders
-   - Type-safe data access methods
-   - Standardized error handling
-   - Clear interface contract
+1. **Data Loader**:
+   - Interface-based design with dependency injection
+   - Factory pattern for object creation
+   - Clear separation of responsibilities
+   - Example usage:
+   ```python
+   from pathlib import Path
+   from src.data import DataLoaderFactory
+   
+   # Create data loader using factory (handles dependency injection)
+   factory = DataLoaderFactory()
+   loader = factory.create_data_loader(
+       data_dir=Path("data/"),
+       image_dir=Path("data/images"),
+       ground_truth_file=Path("data/ground_truth.csv"),
+       cache_enabled=True
+   )
+   
+   # Access data with proper type handling
+   invoice_ids = loader.get_available_invoice_ids()
+   image, ground_truth = loader.get_invoice_data("1017")
+   
+   # Access normalized fields with proper types
+   work_order = ground_truth["Work Order Number"]  # Format preserved
+   total_cost = ground_truth["Total"]  # Cleaned and normalized
+   ```
 
-2. **Data Loader Factory**:
-   - Creates data loader instances
-   - Supports multiple implementations
-   - Registry-based design
-   - Configuration through constructor
+2. **Ground Truth Manager**:
+   - Handles data validation and type conversion
+   - Injected into DataLoader
+   - Manages data caching
+   - Example usage:
+   ```python
+   from src.data import GroundTruthManager
+   
+   # Create manager (usually done by factory)
+   manager = GroundTruthManager(
+       ground_truth_file=Path("data/ground_truth.csv"),
+       cache_enabled=True
+   )
+   
+   # Validate and access data
+   manager.validate_ground_truth()
+   data = manager.get_ground_truth("1017")
+   ```
 
-3. **Error Handling**:
-   - Custom exception hierarchy
-   - Specific error types
-   - Comprehensive logging
-   - Resource cleanup
+## Dependency Injection ✓
 
-Example usage:
-```python
-from pathlib import Path
-from src.data import DataLoaderFactory
+The project follows strict dependency injection principles:
 
-# Create data loader using factory
-factory = DataLoaderFactory()
-loader = factory.create_data_loader(
-    data_dir=Path("data/"),
-    image_dir=Path("data/images"),
-    ground_truth_file=Path("data/ground_truth.csv")
-)
+1. **Constructor Injection**:
+   ```python
+   class Service:
+       def __init__(
+           self,
+           data_loader: BaseDataLoader,
+           model: BaseModel,
+           config: BaseConfig
+       ):
+           self.data_loader = data_loader
+           self.model = model
+           self.config = config
+   ```
 
-# Load and access data
-invoice_ids = loader.get_available_invoice_ids()
-image, ground_truth = loader.get_invoice_data("1017")
+2. **Factory Pattern**:
+   ```python
+   class ServiceFactory:
+       def create_service(self) -> BaseService:
+           config = self.create_config()
+           data_loader = self.create_data_loader(config)
+           model = self.create_model(config)
+           return Service(config, data_loader, model)
+   ```
 
-# Access specific fields
-work_order = ground_truth["Work Order Number/Numero de Orden"]
-total_cost = ground_truth["Total"]
-```
+3. **Interface Dependencies**:
+   ```python
+   # Depend on interfaces, not implementations
+   def process_data(data_loader: BaseDataLoader):
+       data = data_loader.load_data()
+       return process(data)
+   ```
+
+4. **Testing with Mocks**:
+   ```python
+   def test_service():
+       mock_loader = Mock(spec=BaseDataLoader)
+       mock_model = Mock(spec=BaseModel)
+       service = Service(mock_loader, mock_model)
+       assert service.process() == expected
+   ```

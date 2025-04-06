@@ -5,12 +5,13 @@ for loading and managing invoice images and ground truth data.
 """
 
 from pathlib import Path
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple, Any
 import pandas as pd
 from PIL import Image
 import logging
 
 from .base_data_loader import BaseDataLoader
+from .ground_truth_manager import GroundTruthManager
 from .exceptions import DataLoadError, GroundTruthError, ImageLoadError, DataValidationError
 
 
@@ -25,23 +26,23 @@ class DataLoader(BaseDataLoader):
         data_dir: Path to the root data directory
         image_dir: Path to the directory containing invoice images
         ground_truth_file: Path to the ground truth CSV file
-        _ground_truth_data: Cached ground truth data DataFrame
+        _ground_truth_manager: Manager for handling ground truth data
         _loaded_images: Cache of loaded images
     """
     
     def __init__(
         self,
         data_dir: Path,
+        ground_truth_manager: GroundTruthManager,
         image_dir: Optional[Path] = None,
-        ground_truth_file: Optional[Path] = None,
         cache_enabled: bool = True
     ) -> None:
         """Initialize the DataLoader.
         
         Args:
             data_dir: Path to the root data directory
+            ground_truth_manager: Manager for ground truth data handling
             image_dir: Optional path to image directory (default: data_dir/images)
-            ground_truth_file: Optional path to ground truth CSV (default: data_dir/ground_truth.csv)
             cache_enabled: Whether to cache loaded data (default: True)
             
         Raises:
@@ -53,17 +54,16 @@ class DataLoader(BaseDataLoader):
             
         self.data_dir = data_dir
         self.image_dir = image_dir or data_dir / "images"
-        self.ground_truth_file = ground_truth_file or data_dir / "ground_truth.csv"
         
-        # Validate required paths exist
+        # Validate image directory exists
         if not self.image_dir.exists():
             raise DataValidationError(f"Image directory does not exist: {self.image_dir}")
-        if not self.ground_truth_file.exists():
-            raise DataValidationError(f"Ground truth file does not exist: {self.ground_truth_file}")
             
-        # Set up caching
+        # Set up dependencies through injection
+        self._ground_truth_manager = ground_truth_manager
+        
+        # Set up image caching
         self.cache_enabled = cache_enabled
-        self._ground_truth_data: Optional[pd.DataFrame] = None
         self._loaded_images: Dict[str, Image.Image] = {}
         
         # Set up logging
@@ -78,16 +78,13 @@ class DataLoader(BaseDataLoader):
         Raises:
             GroundTruthError: If there is an error loading the ground truth data
         """
-        if self._ground_truth_data is None or not self.cache_enabled:
-            try:
-                self._ground_truth_data = pd.read_csv(self.ground_truth_file)
-                self._logger.info(f"Loaded ground truth data with {len(self._ground_truth_data)} entries")
-            except (pd.errors.EmptyDataError, pd.errors.ParserError) as e:
-                error_msg = f"Error loading ground truth data: {str(e)}"
-                self._logger.error(error_msg)
-                raise GroundTruthError(error_msg) from e
-                
-        return self._ground_truth_data
+        try:
+            self._ground_truth_manager.validate_ground_truth()
+            return self._ground_truth_manager._ground_truth_data
+        except GroundTruthError as e:
+            error_msg = f"Error loading ground truth data: {str(e)}"
+            self._logger.error(error_msg)
+            raise GroundTruthError(error_msg) from e
         
     def load_image(self, invoice_id: str) -> Image.Image:
         """Load an invoice image by its ID.
@@ -131,32 +128,35 @@ class DataLoader(BaseDataLoader):
         image_files = list(self.image_dir.glob("*.jpg"))
         image_ids = {f.stem for f in image_files}
         
-        # Get all ground truth IDs
-        ground_truth = self.load_ground_truth()
-        ground_truth_ids = set(ground_truth["Invoice"].astype(str))
+        # Get all ground truth IDs from manager
+        try:
+            ground_truth = self.load_ground_truth()
+            ground_truth_ids = set(ground_truth["Invoice"].astype(str))
+        except GroundTruthError:
+            ground_truth_ids = set()
         
         # Return IDs that have both image and ground truth
         valid_ids = sorted(image_ids.intersection(ground_truth_ids))
         self._logger.info(f"Found {len(valid_ids)} valid invoice IDs")
         return valid_ids
         
-    def get_invoice_data(self, invoice_id: str) -> Tuple[Image.Image, pd.Series]:
+    def get_invoice_data(self, invoice_id: str) -> Tuple[Image.Image, Dict[str, str]]:
         """Get both the image and ground truth data for an invoice.
         
         Args:
             invoice_id: The invoice ID to retrieve
             
         Returns:
-            Tuple of (image, ground_truth_row)
+            Tuple of (image, ground_truth_data)
+            where ground_truth_data is a dictionary with properly formatted values
             
         Raises:
             DataLoadError: If either the image or ground truth data cannot be loaded
         """
         try:
-            # Load ground truth
-            ground_truth = self.load_ground_truth()
-            row = ground_truth[ground_truth["Invoice"].astype(str) == invoice_id].iloc[0]
-        except IndexError as e:
+            # Load ground truth using manager for proper type handling
+            ground_truth = self._ground_truth_manager.get_ground_truth(invoice_id)
+        except GroundTruthError as e:
             error_msg = f"Invoice ID {invoice_id} not found in ground truth data"
             self._logger.error(error_msg)
             raise DataLoadError(error_msg) from e
@@ -169,10 +169,10 @@ class DataLoader(BaseDataLoader):
             self._logger.error(error_msg)
             raise DataLoadError(error_msg) from e
             
-        return image, row
+        return image, ground_truth
         
     def clear_cache(self) -> None:
         """Clear the image and ground truth caches."""
         self._loaded_images.clear()
-        self._ground_truth_data = None
+        self._ground_truth_manager.clear_cache()
         self._logger.debug("Cleared data caches")

@@ -102,6 +102,15 @@ Here's the Project Rules artifact:
 - Provide clear error messages
 - Clean up resources in case of errors
 
+### Data Validation
+- Validate field types during data loading
+- Implement field-specific validation rules
+- Log validation failures with detailed context
+- Provide helpful error messages for data format issues
+- Include original and attempted normalized values in errors
+- Handle missing or malformed data gracefully
+- Document expected data formats clearly
+
 ### Exception Guidelines
 - Create custom exceptions for domain-specific errors
 - Use built-in exceptions for standard errors
@@ -109,6 +118,18 @@ Here's the Project Rules artifact:
 - Handle exceptions at appropriate levels
 
 ## Component-Specific Rules
+
+### Data Management
+- Field types must be explicitly defined and documented
+- Data cleaning and normalization must occur during loading
+- Implement field-specific validation rules:
+  - Work Order Number: Preserve leading zeros and format
+  - Total Amount: Clean currency symbols and normalize decimals
+- Provide clear error messages for validation failures
+- Document data type transformations in docstrings
+- Implement robust comparison strategies for each field type
+- Cache normalized data when appropriate
+- Log all data cleaning and transformation operations
 
 ### Configuration Management
 - All configuration should be in YAML files
@@ -169,3 +190,14 @@ Here's the Project Rules artifact:
 - Include challenging invoices in the test set
 - Document testing approach
 - Handle edge cases appropriately
+
+### Data Validation Testing
+- Test all supported data formats and variations
+- Include edge cases for each field type:
+  - Work Order Number: Leading zeros, special characters
+  - Total Amount: Various currency formats, thousand separators
+- Test data cleaning and normalization
+- Verify error handling for invalid data
+- Test caching behavior with large datasets
+- Validate comparison strategies
+- Document test data formats and variations

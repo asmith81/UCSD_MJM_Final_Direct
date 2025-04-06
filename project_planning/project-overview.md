@@ -40,6 +40,13 @@ Evaluate and compare multiple open-source Large Multimodal Models (LMMs) on thei
 - Images are in JPG format, identified by a unique number in the filename (e.g., 12147.jpg)
 - Ground truth data is provided in a CSV file that matches images by their unique ID
 - Initial testing will use 20 images, with expansion to ~150 images for full evaluation
+- Key fields and their specifications:
+  - Work Order Number: 5-digit alphanumeric string, preserves leading zeros
+  - Total Cost: Float with 2 decimal places, stored after cleaning (removing "$" and ",")
+- Data type handling:
+  - Ground truth data types are normalized during loading
+  - Field-specific comparison strategies handle format variations
+  - Robust validation ensures data integrity
 
 ## Testing Environment
 - RunPod environment with approximately 94GB RAM and 150GB storage

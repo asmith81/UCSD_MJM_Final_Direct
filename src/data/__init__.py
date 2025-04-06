@@ -7,6 +7,7 @@ and their corresponding ground truth data.
 from .base_data_loader import BaseDataLoader
 from .data_loader import DataLoader
 from .data_loader_factory import DataLoaderFactory
+from .ground_truth_manager import GroundTruthManager
 from .exceptions import (
     DataLoadError,
     GroundTruthError,
@@ -18,6 +19,7 @@ __all__ = [
     'BaseDataLoader',
     'DataLoader',
     'DataLoaderFactory',
+    'GroundTruthManager',
     'DataLoadError',
     'GroundTruthError',
     'ImageLoadError',

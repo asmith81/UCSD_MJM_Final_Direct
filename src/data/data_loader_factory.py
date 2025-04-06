@@ -5,6 +5,7 @@ from typing import Optional, Type, Dict
 
 from .base_data_loader import BaseDataLoader
 from .data_loader import DataLoader
+from .ground_truth_manager import GroundTruthManager
 
 
 class DataLoaderFactory:
@@ -59,10 +60,18 @@ class DataLoaderFactory:
                 f"Available types: {list(cls.REGISTRY.keys())}"
             )
             
+        # Create GroundTruthManager first
+        ground_truth_file = ground_truth_file or data_dir / "ground_truth.csv"
+        ground_truth_manager = GroundTruthManager(
+            ground_truth_file=ground_truth_file,
+            cache_enabled=cache_enabled
+        )
+            
+        # Create DataLoader with injected dependencies
         loader_class = cls.REGISTRY[loader_type]
         return loader_class(
             data_dir=data_dir,
+            ground_truth_manager=ground_truth_manager,
             image_dir=image_dir,
-            ground_truth_file=ground_truth_file,
             cache_enabled=cache_enabled
         ) 

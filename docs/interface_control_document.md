@@ -251,13 +251,31 @@ class EvaluationService(ABC):
 ```python
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List, Tuple, Optional
 from PIL import Image
 import pandas as pd
 
 class BaseDataLoader(ABC):
     """Base interface for data loading components."""
     
+    @abstractmethod
+    def __init__(
+        self,
+        data_dir: Path,
+        ground_truth_manager: GroundTruthManager,
+        image_dir: Optional[Path] = None,
+        cache_enabled: bool = True
+    ) -> None:
+        """Initialize with required dependencies.
+        
+        Args:
+            data_dir: Path to the root data directory
+            ground_truth_manager: Manager for ground truth data handling
+            image_dir: Optional path to image directory
+            cache_enabled: Whether to enable caching
+        """
+        pass
+        
     @abstractmethod
     def load_ground_truth(self) -> pd.DataFrame:
         """Load the ground truth data from CSV."""
@@ -274,7 +292,7 @@ class BaseDataLoader(ABC):
         pass
         
     @abstractmethod
-    def get_invoice_data(self, invoice_id: str) -> Tuple[Image.Image, pd.Series]:
+    def get_invoice_data(self, invoice_id: str) -> Tuple[Image.Image, Dict[str, str]]:
         """Get both the image and ground truth data for an invoice."""
         pass
         
@@ -284,7 +302,37 @@ class BaseDataLoader(ABC):
         pass
 ```
 
-### 5.2 Data Loader Factory
+### 5.2 Ground Truth Manager Interface
+```python
+from pathlib import Path
+from typing import List, Dict, Optional
+
+class GroundTruthManager:
+    """Interface for ground truth data management."""
+    
+    def __init__(
+        self,
+        ground_truth_file: Path,
+        required_columns: Optional[List[str]] = None,
+        cache_enabled: bool = True
+    ) -> None:
+        """Initialize the ground truth manager."""
+        pass
+    
+    def validate_ground_truth(self) -> None:
+        """Validate ground truth data structure and content."""
+        pass
+    
+    def get_ground_truth(self, invoice_id: str) -> Dict[str, str]:
+        """Get ground truth data for a specific invoice."""
+        pass
+    
+    def get_expected_fields(self) -> List[str]:
+        """Get list of fields expected to be extracted."""
+        pass
+```
+
+### 5.3 Data Loader Factory
 ```python
 from pathlib import Path
 from typing import Optional, Type, Dict
@@ -305,11 +353,25 @@ class DataLoaderFactory:
         ground_truth_file: Optional[Path] = None,
         cache_enabled: bool = True
     ) -> BaseDataLoader:
-        """Create a data loader instance."""
-        pass
+        """Create a data loader instance with proper dependency injection."""
+        # Create GroundTruthManager first
+        ground_truth_file = ground_truth_file or data_dir / "ground_truth.csv"
+        ground_truth_manager = GroundTruthManager(
+            ground_truth_file=ground_truth_file,
+            cache_enabled=cache_enabled
+        )
+            
+        # Create DataLoader with injected dependencies
+        loader_class = cls.REGISTRY[loader_type]
+        return loader_class(
+            data_dir=data_dir,
+            ground_truth_manager=ground_truth_manager,
+            image_dir=image_dir,
+            cache_enabled=cache_enabled
+        )
 ```
 
-### 5.3 Custom Exceptions
+### 5.4 Custom Exceptions
 ```python
 class DataLoadError(Exception):
     """Base exception for data loading errors."""
@@ -327,6 +389,56 @@ class DataValidationError(DataLoadError):
     """Raised when data validation fails."""
     pass
 ```
+
+### 5.5 Ground Truth Field Specifications
+
+#### Field Types and Validation
+```python
+class GroundTruthFields:
+    """Specification for ground truth data fields."""
+    
+    TOTAL_AMOUNT = {
+        "type": float,
+        "validation": "Positive number with 2 decimal places",
+        "storage": "Float",
+        "example": "123.45"
+    }
+    
+    WORK_ORDER = {
+        "type": str,
+        "validation": "Alphanumeric, preserves leading zeros",
+        "storage": "Object (string)",
+        "example": "00123"
+    }
+```
+
+#### Comparison Strategy
+```python
+class FieldComparison:
+    """Strategy for comparing LLM outputs with ground truth."""
+    
+    @staticmethod
+    def compare_total(ground_truth: float, llm_output: str) -> bool:
+        """Compare total amount values.
+        
+        Ground Truth: Float with 2 decimal places
+        LLM Output: Various string formats ("$123.45", "123", etc.)
+        Strategy: Normalize to float, compare with epsilon
+        """
+        pass
+    
+    @staticmethod
+    def compare_work_order(ground_truth: str, llm_output: str) -> bool:
+        """Compare work order numbers.
+        
+        Ground Truth: String preserving exact format
+        LLM Output: Potentially different format
+        Strategy: Case-insensitive exact match after normalization
+        """
+        pass
+```
+
+See ADR-001 for detailed rationale and implementation guidelines.
 
 ## 6. Interface Interactions
 
@@ -465,4 +577,123 @@ evaluation:
     path: test_path
   output:
     format: json
-``` 
+```
+
+## 12. Dependency Injection Patterns ✓
+
+### 12.1 Core Principles
+1. **Constructor Injection**
+   - Dependencies must be passed through constructors
+   - No service locator or global state
+   - Clear dependency declaration in interfaces
+   - Example:
+     ```python
+     def __init__(
+         self,
+         config_factory: ConfigFactory,
+         data_loader: BaseDataLoader,
+         model: BaseModel
+     ) -> None:
+         self.config_factory = config_factory
+         self.data_loader = data_loader
+         self.model = model
+     ```
+
+2. **Factory Pattern**
+   - Factories handle dependency creation
+   - Factories manage object lifecycles
+   - Dependencies created in correct order
+   - Example:
+     ```python
+     class ServiceFactory:
+         def create_service(self) -> BaseService:
+             config = self.create_config()
+             data_loader = self.create_data_loader(config)
+             model = self.create_model(config)
+             return Service(config, data_loader, model)
+     ```
+
+3. **Interface Dependencies**
+   - Depend on interfaces, not implementations
+   - Use abstract base classes
+   - Clear interface contracts
+   - Example:
+     ```python
+     class Service:
+         def __init__(self, data_loader: BaseDataLoader):
+             # Depends on interface, not concrete class
+             self._data_loader = data_loader
+     ```
+
+4. **Configuration Injection**
+   - Configuration passed as dependencies
+   - No direct loading of config files
+   - Use configuration objects
+   - Example:
+     ```python
+     class Model:
+         def __init__(self, config: BaseConfig):
+             self.config = config
+             self.parameters = config.get_data()
+     ```
+
+### 12.2 Implementation Guidelines
+1. **Component Creation**
+   - Use factories for complex objects
+   - Inject all dependencies
+   - Clear creation order
+   - Example from DataLoader:
+     ```python
+     # Factory creates and injects dependencies
+     loader = factory.create_data_loader(
+         data_dir=Path("data/"),
+         image_dir=Path("data/images"),
+         ground_truth_file=Path("data/ground_truth.csv")
+     )
+     ```
+
+2. **Testing Support**
+   - Easy dependency mocking
+   - Clear test setup
+   - Isolated component testing
+   - Example:
+     ```python
+     def test_service(mock_data_loader, mock_model):
+         service = Service(
+             data_loader=mock_data_loader,
+             model=mock_model
+         )
+         assert service.process() == expected_result
+     ```
+
+3. **Error Handling**
+   - Clear dependency validation
+   - Proper error propagation
+   - Descriptive error messages
+   - Example:
+     ```python
+     def __init__(self, config: BaseConfig):
+         if not isinstance(config, BaseConfig):
+             raise TypeError("config must implement BaseConfig")
+         self.config = config
+     ```
+
+4. **Documentation**
+   - Document dependencies
+   - Clear initialization requirements
+   - Usage examples
+   - Example:
+     ```python
+     class Service:
+         """Service requiring data_loader and model dependencies.
+         
+         Args:
+             data_loader: Handles data loading operations
+             model: Processes the loaded data
+         
+         Example:
+             loader = DataLoader(...)
+             model = Model(...)
+             service = Service(loader, model)
+         """
+     ``` 

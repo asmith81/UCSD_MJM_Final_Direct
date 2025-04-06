@@ -203,10 +203,14 @@ invoice-extraction-comparison/
 - Added custom exceptions for error handling
 - Clear separation between interface and implementations
 - Comprehensive error handling and logging
+- Field-specific data type handling:
+  - Total Amount: Stored as float, cleaned during load
+  - Work Order Number: Preserved as string with format
+- Robust validation and comparison strategies
 - Example usage:
   ```python
   from pathlib import Path
-  from src.data import DataLoaderFactory
+  from src.data import DataLoaderFactory, GroundTruthManager
   
   # Create data loader instance using factory
   factory = DataLoaderFactory()
@@ -220,12 +224,12 @@ invoice-extraction-comparison/
   # Get available invoice IDs
   invoice_ids = loader.get_available_invoice_ids()
   
-  # Load specific invoice data
+  # Load specific invoice data with proper type handling
   image, ground_truth = loader.get_invoice_data("1017")
   
-  # Access ground truth data
-  work_order = ground_truth["Work Order Number/Numero de Orden"]
-  total_cost = ground_truth["Total"]
+  # Access normalized ground truth data
+  work_order = ground_truth["Work Order Number"]  # Preserves format
+  total_cost = ground_truth["Total"]  # Cleaned and normalized
   ```
 
 ### Source Code (`src/`)
