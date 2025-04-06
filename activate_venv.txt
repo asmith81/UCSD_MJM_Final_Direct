@@ -1,3 +1,6 @@
+Allow powershell as admin
+Set-ExecutionPolicy -ExecutionPolicy RemoteSigned -Scope CurrentUser
+
 To activate the virtual environment in Cursor's terminal, run:
 
 .\.venv\Scripts\Activate.ps1
@@ -5,3 +8,14 @@ To activate the virtual environment in Cursor's terminal, run:
 If that doesn't work, use this alternative command:
 
 $env:VIRTUAL_ENV = (Resolve-Path ".\.venv").Path; $env:PATH = "$env:VIRTUAL_ENV\Scripts;$env:PATH" 
+
+Install Torch First
+# Install numpy and pandas first
+pip install numpy==1.24.1
+pip install pandas==1.5.3
+
+# Install PyTorch with CUDA 11.8 using the correct URL
+pip install torch==2.6.0 torchvision==0.17.0 --index-url https://download.pytorch.org/whl/cu118
+
+Then install requirements
+pip install -r requirements.txt
