@@ -106,9 +106,131 @@ class ConfigLoader:
         pass
 ```
 
-## 2. Model System (In Progress)
+## 2. Image Processing System ✓
 
-### 2.1 Base Model Interface
+### 2.1 Image Processor Configuration
+```python
+from dataclasses import dataclass
+from typing import Tuple, Optional
+from enum import Enum
+
+class ColorMode(Enum):
+    """Supported color modes for image processing."""
+    RGB = "RGB"
+    GRAYSCALE = "L"
+
+@dataclass
+class ImageProcessorConfig:
+    """Configuration for image preprocessing operations."""
+    target_size: Tuple[int, int] = (1024, 1365)
+    color_mode: ColorMode = ColorMode.RGB
+    normalize: bool = True
+    maintain_aspect_ratio: bool = True
+    jpeg_quality: int = 95
+    contrast_factor: Optional[float] = None
+    brightness_factor: Optional[float] = None
+    sharpness_factor: Optional[float] = None
+```
+
+### 2.2 Base Image Processor Interface
+```python
+from abc import ABC, abstractmethod
+from typing import List
+from PIL import Image
+from src.config.base_config import BaseConfig
+
+class BaseImageProcessor(ABC):
+    """Base interface for image preprocessing operations."""
+    
+    @abstractmethod
+    def initialize(self, config: BaseConfig) -> None:
+        """Initialize the image processor with configuration.
+        
+        Args:
+            config: Image processor configuration
+            
+        Raises:
+            ConfigurationError: If configuration is invalid
+        """
+        pass
+        
+    @abstractmethod
+    def preprocess_image(self, image: Image.Image) -> Image.Image:
+        """Preprocess a single image according to configuration.
+        
+        Args:
+            image: Input PIL Image
+            
+        Returns:
+            Image.Image: Preprocessed image
+            
+        Raises:
+            ImageProcessingError: If processing fails
+        """
+        pass
+        
+    @abstractmethod
+    def batch_preprocess(self, images: List[Image.Image]) -> List[Image.Image]:
+        """Preprocess multiple images.
+        
+        Args:
+            images: List of input PIL Images
+            
+        Returns:
+            List[Image.Image]: List of preprocessed images
+            
+        Raises:
+            ImageProcessingError: If processing fails
+        """
+        pass
+        
+    @abstractmethod
+    def validate_image(self, image: Image.Image) -> bool:
+        """Validate that an image meets processing requirements.
+        
+        Args:
+            image: Input PIL Image
+            
+        Returns:
+            bool: True if image is valid, False otherwise
+        """
+        pass
+```
+
+### 2.3 Image Processor Factory
+```python
+from typing import Dict, Type
+from src.image.base_image_processor import BaseImageProcessor
+from src.config.base_config import BaseConfig
+
+class ImageProcessorFactory:
+    """Factory for creating image processor instances."""
+    
+    REGISTRY: Dict[str, Type[BaseImageProcessor]] = {}
+    
+    def create_processor(
+        self,
+        processor_type: str,
+        config: BaseConfig
+    ) -> BaseImageProcessor:
+        """Create an image processor instance.
+        
+        Args:
+            processor_type: Type of processor to create
+            config: Processor configuration
+            
+        Returns:
+            BaseImageProcessor: The created processor instance
+            
+        Raises:
+            ValueError: If processor_type is not supported
+        """
+        pass
+```
+
+## 3. Model System (In Progress)
+
+### 3.1 Base Model Interface
 ```python
 from abc import ABC, abstractmethod
 from typing import Any, Dict
@@ -145,7 +267,7 @@ class BaseModel(ABC):
         pass
 ```
 
-### 2.2 Model Factory
+### 3.2 Model Factory
 ```python
 from typing import Dict, Type
 from src.models.base_model import BaseModel
@@ -172,9 +294,9 @@ class ModelFactory:
         pass
 ```
 
-## 3. Prompt System (In Progress)
+## 4. Prompt System (In Progress)
 
-### 3.1 Base Prompt Generator Interface
+### 4.1 Base Prompt Generator Interface
 ```python
 from abc import ABC, abstractmethod
 from typing import Dict, Any
@@ -194,9 +316,9 @@ class BasePromptGenerator(ABC):
         pass
 ```
 
-## 4. Evaluation System (In Progress)
+## 5. Evaluation System (In Progress)
 
-### 4.1 Evaluation Service Interface
+### 5.1 Evaluation Service Interface
 ```python
 from abc import ABC, abstractmethod
 from typing import Dict, Any, List
@@ -245,9 +367,9 @@ class EvaluationService(ABC):
 - Defined base interfaces for Models, Prompts, and Evaluation
 - Established component interaction rules
 
-## 5. Data Interfaces ✓
+## 6. Data Interfaces ✓
 
-### 5.1 Base Data Loader Interface
+### 6.1 Base Data Loader Interface
 ```python
 from abc import ABC, abstractmethod
 from pathlib import Path
@@ -302,7 +424,7 @@ class BaseDataLoader(ABC):
         pass
 ```
 
-### 5.2 Ground Truth Manager Interface
+### 6.2 Ground Truth Manager Interface
 ```python
 from pathlib import Path
 from typing import List, Dict, Optional
@@ -332,7 +454,7 @@ class GroundTruthManager:
         pass
 ```
 
-### 5.3 Data Loader Factory
+### 6.3 Data Loader Factory
 ```python
 from pathlib import Path
 from typing import Optional, Type, Dict
@@ -371,7 +493,7 @@ class DataLoaderFactory:
         )
 ```
 
-### 5.4 Custom Exceptions
+### 6.4 Custom Exceptions
 ```python
 class DataLoadError(Exception):
     """Base exception for data loading errors."""
@@ -390,7 +512,7 @@ class DataValidationError(DataLoadError):
     pass
 ```
 
-### 5.5 Ground Truth Field Specifications
+### 6.5 Ground Truth Field Specifications
 
 #### Field Types and Validation
 ```python
@@ -440,25 +562,25 @@ class FieldComparison:
 
 See ADR-001 for detailed rationale and implementation guidelines.
 
-## 6. Interface Interactions
+## 7. Interface Interactions
 
-### 6.1 Configuration Flow
+### 7.1 Configuration Flow
 
 1. `ConfigLoader` loads YAML files
 2. `ConfigFactory` creates appropriate configuration objects
 3. Configuration objects are validated
 4. Validated configurations are passed to components
 
-### 6.2 Model Processing Flow
+### 7.2 Model Processing Flow
 
 1. `DataLoader` loads input images and ground truth
 2. `BaseModel` processes images using configuration
 3. `BasePromptGenerator` generates prompts based on context
 4. `EvaluationService` evaluates results against ground truth
 
-## 7. Error Handling
+## 8. Error Handling
 
-### 7.1 Custom Exceptions
+### 8.1 Custom Exceptions
 
 ```python
 class ConfigValidationError(Exception):
@@ -478,7 +600,7 @@ class ModelProcessingError(Exception):
     pass
 ```
 
-## 8. Version Control
+## 9. Version Control
 
 This document should be updated whenever:
 - New interfaces are added
@@ -486,27 +608,27 @@ This document should be updated whenever:
 - Interface interactions change
 - Error handling is updated
 
-## 9. References
+## 10. References
 
 - [Project Directory Structure](../project_planning/project-directory.md)
 - [Core Architectural Principles](../project_planning/core-architectural-principals.mdc)
 - [Development Guidelines](../project_planning/development-guidelines.md)
 
-## 10. Testing Guidelines
+## 11. Testing Guidelines
 
-### 10.1 Test Structure
+### 11.1 Test Structure
 - One test file per component
 - Shared fixtures in conftest.py
 - Test data in fixtures directory
 - Clear test naming conventions
 
-### 10.2 Test Coverage
+### 11.2 Test Coverage
 - Minimum 80% coverage required
 - Critical paths must be tested
 - Edge cases must be covered
 - Error conditions must be tested
 
-### 10.3 Test Fixtures
+### 11.3 Test Fixtures
 ```python
 @pytest.fixture
 def temp_config_dir() -> Path:
@@ -524,33 +646,33 @@ def config_loader(temp_config_dir: Path, config_factory: ConfigFactory) -> Confi
     pass
 ```
 
-### 10.4 Test Data
+### 11.4 Test Data
 - Use realistic test data
 - Include both valid and invalid cases
 - Document test data structure
 - Keep test data minimal but complete
 
-## 11. Configuration Guidelines
+## 12. Configuration Guidelines
 
-### 11.1 YAML Structure
+### 12.1 YAML Structure
 - Clear hierarchy
 - Consistent naming
 - Documented fields
 - Type specifications
 
-### 11.2 Validation Rules
+### 12.2 Validation Rules
 - Required fields
 - Field types
 - Value ranges
 - Dependencies
 
-### 11.3 Error Messages
+### 12.3 Error Messages
 - Clear and specific
 - Include context
 - Suggest solutions
 - Use consistent format
 
-### 11.4 Example Configuration Files
+### 12.4 Example Configuration Files
 ```yaml
 # config/models/model_config.yaml
 model:
@@ -579,9 +701,9 @@ evaluation:
     format: json
 ```
 
-## 12. Dependency Injection Patterns ✓
+## 13. Dependency Injection Patterns ✓
 
-### 12.1 Core Principles
+### 13.1 Core Principles
 1. **Constructor Injection**
    - Dependencies must be passed through constructors
    - No service locator or global state
@@ -637,7 +759,7 @@ evaluation:
              self.parameters = config.get_data()
      ```
 
-### 12.2 Implementation Guidelines
+### 13.2 Implementation Guidelines
 1. **Component Creation**
    - Use factories for complex objects
    - Inject all dependencies

@@ -15,6 +15,29 @@ from .exceptions import (
     DataValidationError
 )
 
+# Import validation utilities
+from .validation_utils import (
+    validate_directory_exists,
+    validate_file_exists,
+    validate_csv_file,
+    validate_image_directory,
+    get_data_statistics,
+    validate_extracted_fields
+)
+
+# Import validators
+from .validators import (
+    BaseValidator,
+    GroundTruthValidator,
+    ImageValidator, 
+    ExtractedDataValidator,
+    validate_total_amount,
+    validate_work_order,
+    normalize_total_amount,
+    normalize_work_order,
+    compare_extracted_to_ground_truth
+)
+
 __all__ = [
     'BaseDataLoader',
     'DataLoader',
@@ -23,5 +46,24 @@ __all__ = [
     'DataLoadError',
     'GroundTruthError',
     'ImageLoadError',
-    'DataValidationError'
+    'DataValidationError',
+    
+    # Validation utilities
+    'validate_directory_exists',
+    'validate_file_exists',
+    'validate_csv_file',
+    'validate_image_directory',
+    'get_data_statistics',
+    'validate_extracted_fields',
+    
+    # Validators
+    'BaseValidator',
+    'GroundTruthValidator',
+    'ImageValidator',
+    'ExtractedDataValidator',
+    'validate_total_amount',
+    'validate_work_order',
+    'normalize_total_amount',
+    'normalize_work_order',
+    'compare_extracted_to_ground_truth'
 ]
