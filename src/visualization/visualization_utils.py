@@ -6,6 +6,9 @@ This module provides utility functions for visualizing data in the invoice extra
 import os
 import numpy as np
 import pandas as pd
+import matplotlib
+# Set non-interactive backend to avoid Tkinter issues in testing environments
+matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import matplotlib.patches as patches
 import seaborn as sns

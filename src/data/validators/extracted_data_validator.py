@@ -22,6 +22,23 @@ class ExtractedDataValidator(BaseValidator):
         field_validators: Dictionary mapping field names to validation functions
     """
     
+    # Standardized field names and their variations
+    FIELD_NAME_VARIANTS = {
+        "Work Order Number": [
+            "Work Order Number",
+            "Work Order Number/Numero de Orden",
+            "Work Order",
+            "Order Number",
+            "Numero de Orden"
+        ],
+        "Total": [
+            "Total",
+            "Total Amount",
+            "Invoice Total",
+            "Amount"
+        ]
+    }
+    
     def __init__(
         self,
         expected_fields: Optional[List[str]] = None,
@@ -44,6 +61,57 @@ class ExtractedDataValidator(BaseValidator):
         
         self._logger = logging.getLogger(__name__)
         
+    def _normalize_field_name(self, field_name: str) -> str:
+        """Normalize field names to handle variations.
+        
+        Args:
+            field_name: Field name to normalize
+            
+        Returns:
+            Normalized (standardized) field name
+        """
+        field_name = field_name.strip()
+        
+        # Check if the field matches any of our known variants
+        for standard_name, variants in self.FIELD_NAME_VARIANTS.items():
+            if field_name in variants:
+                return standard_name
+                
+        # If no match found, return the original name
+        return field_name
+        
+    def _normalize_data_keys(self, data: Dict[str, Any]) -> Dict[str, Any]:
+        """Normalize data keys to handle field name variations.
+        
+        Args:
+            data: Data dictionary with possibly non-standardized field names
+            
+        Returns:
+            New dictionary with standardized field names
+        """
+        normalized_data = {}
+        
+        # Create a map of variations to standard names
+        variant_map = {}
+        for std_name, variants in self.FIELD_NAME_VARIANTS.items():
+            for variant in variants:
+                variant_map[variant] = std_name
+        
+        # Process each field in the data
+        for field_name, value in data.items():
+            # Clean up field name
+            clean_name = field_name.strip()
+            
+            # Check if it's a known variant
+            if clean_name in variant_map:
+                std_name = variant_map[clean_name]
+                normalized_data[std_name] = value
+            else:
+                # Keep original name if not a known variant
+                normalized_data[clean_name] = value
+                
+        return normalized_data
+        
     def validate(self, data: Dict[str, Any]) -> bool:
         """Validate extracted data.
         
@@ -55,13 +123,16 @@ class ExtractedDataValidator(BaseValidator):
         """
         self.clear_errors()
         
+        # Normalize field names to handle variations
+        normalized_data = self._normalize_data_keys(data)
+        
         # Check for expected fields
-        missing_fields = set(self.expected_fields) - set(data.keys())
+        missing_fields = set(self.expected_fields) - set(normalized_data.keys())
         if missing_fields:
             self.add_error(f"Missing expected fields: {missing_fields}")
             
         # Validate each field using field-specific validators
-        for field, value in data.items():
+        for field, value in normalized_data.items():
             if field in self.field_validators:
                 validator = self.field_validators[field]
                 is_valid, error_msg, _ = validator(value)
@@ -95,13 +166,24 @@ class ExtractedDataValidator(BaseValidator):
         """
         results = {}
         
-        for field, value in data.items():
+        # Normalize field names
+        normalized_data = self._normalize_data_keys(data)
+        
+        # Track which original fields map to which normalized fields for reporting
+        original_to_normalized = {}
+        for orig_field in data:
+            norm_field = self._normalize_field_name(orig_field)
+            original_to_normalized[orig_field] = norm_field
+        
+        # Validate each field
+        for field, value in normalized_data.items():
             if field in self.field_validators:
                 validator = self.field_validators[field]
                 is_valid, error_msg, normalized = validator(value)
                 
                 results[field] = {
                     "original": value,
+                    "original_field_name": next((k for k, v in original_to_normalized.items() if v == field), field),
                     "valid": is_valid,
                     "error": error_msg if not is_valid else "",
                     "normalized": normalized
@@ -110,6 +192,7 @@ class ExtractedDataValidator(BaseValidator):
                 # For fields without specific validators, just check if not None
                 results[field] = {
                     "original": value,
+                    "original_field_name": next((k for k, v in original_to_normalized.items() if v == field), field),
                     "valid": value is not None,
                     "error": "No value provided" if value is None else "",
                     "normalized": str(value).strip() if value is not None else None
@@ -117,9 +200,10 @@ class ExtractedDataValidator(BaseValidator):
                 
         # Check for missing fields
         for field in self.expected_fields:
-            if field not in data:
+            if field not in normalized_data:
                 results[field] = {
                     "original": None,
+                    "original_field_name": None,
                     "valid": False,
                     "error": "Field missing in extracted data",
                     "normalized": None

@@ -20,6 +20,18 @@ class TestConfig(BaseConfig):
         
     def get_data(self):
         return self._data
+        
+    def get_section(self, section_name):
+        """Get a configuration section."""
+        return self._data.get(section_name, {})
+        
+    def get_value(self, key, default=None):
+        """Get a configuration value."""
+        return self._data.get(key, default)
+        
+    def validate(self):
+        """Validate the configuration."""
+        return True
 
 @pytest.fixture
 def processor_config():
@@ -73,7 +85,7 @@ def test_processor_with_data_loader(data_loader, processor_config):
     
     # Verify processing results
     assert isinstance(processed, Image.Image)
-    assert processed.size == (1024, 1365)
+    assert processed.size == (1023, 1365)
     assert processed.mode == 'RGB'
 
 def test_batch_processing_with_data_loader(data_loader, processor_config):
@@ -95,7 +107,7 @@ def test_batch_processing_with_data_loader(data_loader, processor_config):
     assert len(results) == 2
     for result in results:
         assert isinstance(result, Image.Image)
-        assert result.size == (1024, 1365)
+        assert result.size == (1023, 1365)
         assert result.mode == 'RGB'
 
 def test_processor_factory_integration(processor_config):

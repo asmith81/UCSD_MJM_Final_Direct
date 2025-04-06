@@ -17,9 +17,9 @@ from src.data.exceptions import (
 )
 
 # Mock data for testing
-MOCK_GROUND_TRUTH_DATA = """Invoice,Field1,Field2
-inv001,value1,value2
-inv002,value3,value4
+MOCK_GROUND_TRUTH_DATA = """Invoice,Work Order Number,Total,Field1,Field2
+inv001,12345,123.45,value1,value2
+inv002,AB123,67.89,value3,value4
 """
 
 # Create a small test image in memory
@@ -127,16 +127,26 @@ def test_load_ground_truth(data_loader):
     
     assert isinstance(df, pd.DataFrame)
     assert len(df) == 2
-    assert list(df.columns) == ["Invoice", "Field1", "Field2"]
+    # Check that core columns exist without checking internal validation columns
+    for col in ["Invoice", "Work Order Number", "Total", "Field1", "Field2"]:
+        assert col in df.columns
     assert df.iloc[0]["Invoice"] == "inv001"
 
 def test_load_ground_truth_invalid_csv(mock_file_system):
     """Test loading invalid ground truth CSV."""
     # Write invalid CSV data with mismatched columns and corrupted format
-    invalid_csv = "Invoice,Field1,Field2\ninv001,value1\ninv002,value2,extra,extra2\ncompletely invalid line"
+    invalid_csv = "Invoice,Work Order Number,Total\ninv001,12345\ninv002,AB123,67.89,extra,extra2\ncompletely invalid line"
     mock_file_system["ground_truth_file"].write_text(invalid_csv)
     
-    loader = DataLoader(mock_file_system["data_dir"])
+    # Create ground truth manager with the invalid file
+    gt_manager = GroundTruthManager(mock_file_system["ground_truth_file"])
+    
+    # Create loader with injected manager
+    loader = DataLoader(
+        data_dir=mock_file_system["data_dir"],
+        ground_truth_manager=gt_manager
+    )
+    
     with pytest.raises(GroundTruthError):
         loader.load_ground_truth()
 
@@ -160,7 +170,15 @@ def test_load_invalid_image(mock_file_system):
     invalid_image = mock_file_system["image_dir"] / "invalid.jpg"
     invalid_image.write_text("not an image")
     
-    loader = DataLoader(mock_file_system["data_dir"])
+    # Create ground truth manager
+    gt_manager = GroundTruthManager(mock_file_system["ground_truth_file"])
+    
+    # Create loader with injected manager
+    loader = DataLoader(
+        data_dir=mock_file_system["data_dir"],
+        ground_truth_manager=gt_manager
+    )
+    
     with pytest.raises(ImageLoadError):
         loader.load_image("invalid")
 
@@ -179,7 +197,7 @@ def test_get_invoice_data(data_loader):
     image, row = data_loader.get_invoice_data("inv001")
     
     assert isinstance(image, Image.Image)
-    assert isinstance(row, pd.Series)
+    assert isinstance(row, dict)
     assert row["Invoice"] == "inv001"
     assert row["Field1"] == "value1"
 
@@ -215,7 +233,7 @@ def test_clear_cache(data_loader):
     data_loader.clear_cache()
     
     # Check that cache is cleared
-    assert data_loader._ground_truth_data is None
+    assert data_loader._ground_truth_manager._ground_truth_data is None
     assert len(data_loader._loaded_images) == 0
 
 def test_cache_disabled(mock_file_system, mock_ground_truth_manager):
