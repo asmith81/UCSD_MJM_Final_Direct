@@ -21,12 +21,6 @@ This to-do list is organized in sequential implementation order by phases and su
       - Model configuration templates
       - Prompt configuration templates
       - Evaluation configuration templates
-- [x] 1.9 Implement ImageProcessor for basic image preprocessing
-      - Created ImageProcessor interface and implementation
-      - Added configuration system with validation
-      - Implemented factory pattern
-      - Added comprehensive test suite
-      - Created usage examples
 
 Section completed with all requirements satisfied and following architectural principles:
 - Interface-based design
@@ -49,6 +43,13 @@ Section completed with all requirements satisfied and following architectural pr
       - Includes caching mechanism and validation
       - Custom exceptions and error handling
       - Documented in ADR-001 for data type decisions
+- [x] 1.9 Implement ImageProcessor for basic image preprocessing
+      - Created ImageProcessor interface and implementation
+      - Added configuration system with validation
+      - Implemented factory pattern
+      - Added comprehensive test suite
+      - Created usage examples
+
 - [ ] 1.10 Create utility functions for data validation and visualization
 - [ ] 1.11 Write data loading notebook to verify data pipeline works correctly
 
