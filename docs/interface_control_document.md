@@ -230,44 +230,105 @@ class ImageProcessorFactory:
 
 ## 3. Model System (In Progress)
 
-### 3.1 Base Model Interface
+### 3.1 Base Model Interface ✓
 ```python
 from abc import ABC, abstractmethod
-from typing import Any, Dict
-from src.config.base_config import BaseConfig
+from pathlib import Path
+from typing import Any, Dict, Optional
+
+from ..config.base_config import BaseConfig
+
+
+class ModelInitializationError(Exception):
+    """Raised when a model fails to initialize properly."""
+    pass
+
+
+class ModelProcessingError(Exception):
+    """Raised when a model fails to process an image."""
+    pass
+
 
 class BaseModel(ABC):
-    """Base interface for all model implementations."""
+    """Base interface for all model implementations.
+    
+    This class defines the interface that all model implementations must follow.
+    Models are responsible for:
+    1. Initializing with configuration
+    2. Processing invoice images
+    3. Returning structured results
+    4. Managing their own resources
+    
+    Implementations should:
+    - Handle their own resource management
+    - Implement proper error handling
+    - Clean up resources when errors occur
+    - Validate inputs before processing
+    """
     
     @abstractmethod
     def initialize(self, config: BaseConfig) -> None:
         """Initialize the model with configuration.
         
-        Args:
-            config: Model configuration
-            
-        Raises:
-            InitializationError: If initialization fails
-        """
-        pass
-    
-    @abstractmethod
-    def process_image(self, image_path: Path) -> Dict[str, Any]:
-        """Process an invoice image.
+        This method should:
+        1. Validate the configuration
+        2. Load model weights/resources
+        3. Set up any required processing pipelines
         
         Args:
-            image_path: Path to the invoice image
-            
-        Returns:
-            Dict[str, Any]: Extracted information
+            config: Model configuration implementing BaseConfig
             
         Raises:
-            ProcessingError: If processing fails
+            ModelInitializationError: If initialization fails
+            ValueError: If configuration is invalid
+        """
+        pass
+        
+    @abstractmethod
+    def process_image(self, image_path: Path) -> Dict[str, Any]:
+        """Process an invoice image and extract information.
+        
+        This method should:
+        1. Validate the input image
+        2. Preprocess the image as needed
+        3. Run inference
+        4. Post-process and structure the results
+        
+        Args:
+            image_path: Path to the invoice image file
+            
+        Returns:
+            Dict containing extracted information with standardized keys
+            
+        Raises:
+            ModelProcessingError: If processing fails
+            FileNotFoundError: If image file doesn't exist
+            ValueError: If image is invalid or corrupted
+        """
+        pass
+        
+    @abstractmethod
+    def validate_config(self, config: BaseConfig) -> bool:
+        """Validate model-specific configuration.
+        
+        This method should verify that:
+        1. All required fields are present
+        2. Field values are within valid ranges
+        3. Dependencies are properly specified
+        
+        Args:
+            config: Model configuration to validate
+            
+        Returns:
+            True if configuration is valid
+            
+        Raises:
+            ValueError: If configuration is invalid with detailed message
         """
         pass
 ```
 
-### 3.2 Model Factory
+### 3.2 Model Factory (In Progress)
 ```python
 from typing import Dict, Type
 from src.models.base_model import BaseModel
@@ -290,9 +351,243 @@ class ModelFactory:
             
         Raises:
             ValueError: If model_type is not supported
+            ModelInitializationError: If model initialization fails
+        """
+        pass
+
+    @classmethod
+    def register_model(cls, model_type: str, model_class: Type[BaseModel]) -> None:
+        """Register a new model implementation.
+        
+        Args:
+            model_type: Type identifier for the model
+            model_class: Model class implementing BaseModel
+            
+        Raises:
+            ValueError: If model_type is already registered
+            TypeError: If model_class doesn't implement BaseModel
         """
         pass
 ```
+
+### 3.3 Output Parser System ✓
+
+#### 3.3.1 Base Output Parser Interface
+```python
+from abc import ABC, abstractmethod
+from typing import Any, Dict, Optional
+from pathlib import Path
+
+from ..config.base_config import BaseConfig
+
+
+class OutputParserError(Exception):
+    """Base exception for output parser errors."""
+    pass
+
+
+class OutputParsingError(OutputParserError):
+    """Raised when parsing model output fails."""
+    pass
+
+
+class OutputValidationError(OutputParserError):
+    """Raised when validation of parsed output fails."""
+    pass
+
+
+class BaseOutputParser(ABC):
+    """Base interface for model output parsing.
+    
+    This interface defines how to parse and structure raw model outputs
+    into a standardized format for evaluation and comparison.
+    
+    Implementations should:
+    - Handle different output formats from various models
+    - Extract structured field data
+    - Normalize field names and values
+    - Validate extracted data against expected formats
+    """
+    
+    @abstractmethod
+    def initialize(self, config: BaseConfig) -> None:
+        """Initialize the parser with configuration.
+        
+        Args:
+            config: Parser configuration
+            
+        Raises:
+            OutputParserError: If initialization fails
+            ValueError: If configuration is invalid
+        """
+        pass
+        
+    @abstractmethod
+    def parse_output(self, model_output: str) -> Dict[str, Any]:
+        """Parse raw model output into structured data.
+        
+        Args:
+            model_output: Raw text output from a model
+            
+        Returns:
+            Dict containing extracted field values
+            
+        Raises:
+            OutputParsingError: If parsing fails
+        """
+        pass
+        
+    @abstractmethod
+    def validate_output(self, parsed_output: Dict[str, Any]) -> bool:
+        """Validate the parsed output for completeness and correctness.
+        
+        Args:
+            parsed_output: Dictionary of parsed field values
+            
+        Returns:
+            True if validation passes, False otherwise
+        """
+        pass
+        
+    @abstractmethod
+    def normalize_output(self, parsed_output: Dict[str, Any]) -> Dict[str, Any]:
+        """Normalize field names and values in parsed output.
+        
+        Applies field-specific normalization to ensure consistent formats
+        regardless of the original model output format.
+        
+        Args:
+            parsed_output: Dictionary of parsed field values
+            
+        Returns:
+            Dictionary with normalized field names and values
+        """
+        pass
+```
+
+#### 3.3.2 Output Parser Factory
+```python
+from typing import Dict, Type, Optional
+from src.models.base_output_parser import BaseOutputParser, OutputParserError
+from src.config.base_config import BaseConfig
+
+
+class OutputParserCreationError(Exception):
+    """Raised when output parser creation fails."""
+    pass
+
+
+class OutputParserFactory:
+    """Factory for creating output parser instances.
+    
+    Uses registration pattern for adding parser implementations.
+    """
+    
+    # Registry of available parser implementations
+    PARSER_REGISTRY: Dict[str, Type[BaseOutputParser]] = {}
+    
+    def create_parser(
+        self, 
+        parser_type: str,
+        config: Optional[BaseConfig] = None
+    ) -> BaseOutputParser:
+        """Create and initialize an output parser instance.
+        
+        Args:
+            parser_type: Type of parser to create
+            config: Optional explicit configuration
+            
+        Returns:
+            BaseOutputParser: The initialized parser instance
+            
+        Raises:
+            OutputParserCreationError: If parser creation fails
+            ValueError: If parser_type is not supported
+        """
+        pass
+        
+    @classmethod
+    def register_parser(cls, parser_type: str, parser_class: Type[BaseOutputParser]) -> None:
+        """Register a new parser implementation.
+        
+        Args:
+            parser_type: Type identifier for the parser
+            parser_class: Parser class implementing BaseOutputParser
+            
+        Raises:
+            ValueError: If parser_type is invalid or parser_class doesn't implement BaseOutputParser
+        """
+        pass
+```
+
+#### 3.3.3 Extracted Fields Parser
+```python
+from typing import Any, Dict, Optional
+import re
+import json
+import logging
+
+from ...base_output_parser import BaseOutputParser, OutputParsingError
+from ....config.base_config import BaseConfig
+from ....data.validators.extracted_data_validator import ExtractedDataValidator
+
+
+class ExtractedFieldsOutputParser(BaseOutputParser):
+    """Parser for extracting structured fields from model outputs.
+    
+    This implementation can handle various output formats:
+    - Plain text with field names and values
+    - JSON-formatted output
+    - Key-value pairs in different formats
+    
+    It normalizes field names to handle variations and validates values.
+    """
+    
+    def __init__(self, data_validator: Optional[ExtractedDataValidator] = None):
+        """Initialize with dependencies."""
+        pass
+        
+    def initialize(self, config: BaseConfig) -> None:
+        """Initialize with configuration."""
+        pass
+        
+    def parse_output(self, model_output: str) -> Dict[str, Any]:
+        """Parse model output text into structured field data."""
+        pass
+        
+    def validate_output(self, parsed_output: Dict[str, Any]) -> bool:
+        """Validate parsed output fields."""
+        pass
+        
+    def normalize_output(self, parsed_output: Dict[str, Any]) -> Dict[str, Any]:
+        """Normalize field names and values."""
+        pass
+```
+
+### 3.4 Model Configuration Requirements
+
+#### Required Configuration Fields
+```yaml
+model:
+  name: str  # Unique identifier for the model
+  type: str  # Type of model (must match registry)
+  version: str  # Model version or checkpoint
+  parameters:  # Model-specific parameters
+    batch_size: int
+    # Other parameters as needed
+```
+
+#### Validation Rules
+1. All required fields must be present
+2. Model type must be registered in factory
+3. Version must be valid for model type
+4. Parameters must meet model-specific requirements
+
+#### Error Handling
+1. Missing fields: Raise ValueError with field name
+2. Invalid type: Raise TypeError with expected type
+3. Invalid values: Raise ValueError with valid range
+4. Resource errors: Raise ModelInitializationError
 
 ## 4. Prompt System (In Progress)
 

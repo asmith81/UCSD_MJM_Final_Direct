@@ -55,7 +55,9 @@ invoice-extraction-comparison/
 │   │   ├── __init__.py
 │   │   ├── model_factory.py         # Factory for creating models
 │   │   ├── base_model.py            # Abstract base class for all models
-│   │   ├── output_parser.py         # Parse model outputs
+│   │   ├── base_output_parser.py    # Abstract base class for output parsers
+│   │   ├── output_parser_factory.py # Factory for creating output parsers
+│   │   ├── output_parser.py         # Parser registration module
 │   │   └── implementations/         # Specific model implementations
 │   │       ├── __init__.py
 │   │       ├── pixtral_model.py     # Pixtral-12B model implementation
@@ -302,6 +304,12 @@ from src.config.implementations.evaluation_config import EvaluationConfig
 - `prompt_config.py`: Prompt-specific configuration implementation
 - `evaluation_config.py`: Evaluation-specific configuration implementation
 
+### Output Parser System (Completed) ✓
+- `base_output_parser.py`: Interface all output parsers must implement
+- `output_parser_factory.py`: Creates parser instances based on configuration
+- `output_parser.py`: Handles registration of parsers
+- `extracted_fields_parser.py`: Main parser implementation for extracting structured data
+
 ### Other Components (In Progress)
 - `model_factory.py`: Creates model instances based on configuration
 - `base_model.py`: Defines the interface all models must implement
@@ -318,3 +326,9 @@ from src.config.implementations.evaluation_config import EvaluationConfig
 - Model implementations in `src/models/`
 - Model configurations in `config/models/`
 - Clear separation between code, weights, and configuration
+
+### Output Parser Management
+- Parser interfaces in `src/models/`
+- Parser implementations in `src/models/output_parser/implementations/`
+- Parser factory provides consistent creation pattern
+- High test coverage (85-100% across components)

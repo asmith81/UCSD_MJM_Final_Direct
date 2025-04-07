@@ -118,19 +118,117 @@ invoice-extraction-comparison/
 │
 ├── src/                           # Source code
 │   ├── config/                    # Configuration system ✓
+│   │   ├── base_config.py        # Configuration interface
+│   │   ├── config_factory.py     # Factory implementation
+│   │   ├── implementations/      # Concrete config implementations
 │   ├── data/                     # Data handling ✓
-│   ├── models/                   # Model implementations (In Progress)
+│   │   ├── base_data_loader.py   # Data loader interface
+│   │   ├── data_loader_factory.py # Factory implementation
+│   │   ├── implementations/      # Concrete loaders
+│   ├── models/                   # Model implementations
+│   │   ├── base_model.py        # Base interface ✓
+│   │   ├── model_factory.py     # Factory ✓
+│   │   └── implementations/     # Model implementations (Planned)
 │   ├── prompts/                  # Prompt management (In Progress)
 │   ├── evaluation/              # Evaluation framework (In Progress)
 │   └── visualization/          # Visualization utilities (In Progress)
 │
 ├── tests/                      # Test suite
 │   ├── test_config.py         # Configuration tests (97% coverage) ✓
+│   ├── test_base_model.py     # Model interface tests (83% coverage) ✓
+│   ├── test_model_factory.py  # Factory tests (95% coverage) ✓
 │   └── fixtures/              # Test data
 │
 ├── notebooks/                  # Jupyter notebooks
 └── docs/                      # Documentation
+    ├── adr/                   # Architecture Decision Records
+    │   ├── 001-ground-truth-data-types.md
+    │   ├── 002-image-processor-configuration.md
+    │   ├── 003-dependency-injection-patterns.md
+    │   └── 004-model-factory-registration.md
+    └── interface_control_document.md  # Interface specifications ✓
 ```
+
+## Architectural Principles
+
+The project follows strict architectural principles:
+
+### 1. Separation of Concerns
+- Each component has a single responsibility
+- Clear boundaries between system parts 
+- Interfaces separate from implementations
+
+### 2. Interface-Based Design
+- Abstract base classes define interfaces
+- Factory pattern for object creation
+- Example:
+  ```python
+  # Interface definition
+  class BaseModel(ABC):
+      @abstractmethod
+      def process_image(self, image_path: Path) -> Dict[str, Any]:
+          """Process an image and return structured data."""
+          pass
+  
+  # Factory implementation
+  class ModelFactory:
+      REGISTRY: Dict[str, Type[BaseModel]] = {}
+      
+      @classmethod
+      def register_model(cls, name: str, model_class: Type[BaseModel]) -> None:
+          """Register a model implementation."""
+          cls.REGISTRY[name] = model_class
+      
+      def create_model(self, name: str, config: BaseConfig) -> BaseModel:
+          """Create a model instance by name."""
+          if name not in self.REGISTRY:
+              raise ValueError(f"Unknown model: {name}")
+          model = self.REGISTRY[name]()
+          model.initialize(config)
+          return model
+  ```
+
+### 3. Dependency Injection
+- Dependencies explicitly passed to constructors
+- No global state or singletons
+- Example:
+  ```python
+  # Constructor-based injection
+  class Service:
+      def __init__(
+          self,
+          data_loader: BaseDataLoader,
+          model: BaseModel,
+          config: BaseConfig
+      ):
+          self.data_loader = data_loader
+          self.model = model
+          self.config = config
+  ```
+
+### 4. Error Handling
+- Domain-specific exception hierarchy
+- Early input validation
+- Detailed error messages
+- Example:
+  ```python
+  # Exception hierarchy
+  class ModelError(Exception):
+      """Base exception for model errors."""
+      pass
+      
+  class ModelInitializationError(ModelError):
+      """Error during model initialization."""
+      pass
+      
+  # Validation with specific errors
+  def process_image(image_path: Path) -> Dict[str, Any]:
+      if not isinstance(image_path, Path):
+          raise TypeError("Image path must be a Path object")
+      if not image_path.exists():
+          raise FileNotFoundError(f"Image not found: {image_path}")
+      # Process the image...
+  ```
 
 ## Configuration System ✓
 
@@ -183,7 +281,7 @@ model_type = model_config.get_data()["type"]
 model_params = model_config.get_data()["parameters"]
 ```
 
-## Model Management
+## Model Management ✓
 
 The project separates model-related files into three distinct areas:
 
@@ -194,83 +292,59 @@ The project separates model-related files into three distinct areas:
    - Organized by model name
 
 2. **Model Code** (`src/models/`):
-   - Model implementations
-   - Factory for model creation
-   - Interface definitions
-   - Common utilities
+   - Model implementations based on BaseModel interface ✓
+   - Factory for model creation ✓ 
+   - Interface definitions and abstractions ✓
+   - Common utilities and error handling ✓
+   - Output parsing system ✓
+   - Example usage:
+   ```python
+   from pathlib import Path
+   from src.models import ModelFactory, create_parser
+   from src.config import ConfigLoader, ConfigFactory
+   
+   # Register model implementations
+   from src.models.implementations.pixtral_model import PixtralModel
+   ModelFactory.register_model("pixtral", PixtralModel)
+   
+   # Create model via factory
+   config_loader = ConfigLoader(
+       config_path=Path("config/"), 
+       config_factory=ConfigFactory()
+   )
+   model_config = config_loader.load_model_config("pixtral")
+   
+   # Factory uses dependency injection and dynamic registration
+   factory = ModelFactory()
+   model = factory.create_model("pixtral", model_config)
+   
+   # Process an image
+   raw_output = model.process_image(Path("data/invoice.jpg"))
+   
+   # Parse and normalize output
+   parser = create_parser("default")
+   parsed_output = parser.parse_output(raw_output)
+   normalized_output = parser.normalize_output(parsed_output)
+   
+   # Validate the output
+   is_valid = parser.validate_output(normalized_output)
+   ```
 
 3. **Model Configuration** (`config/models/`):
    - Model parameters
    - Architecture settings
    - Training configurations
    - Inference settings
-
-## Testing
-
-The project uses pytest with comprehensive coverage:
-
-1. Run all tests:
-```bash
-pytest tests/ -v
-```
-
-2. Run with coverage:
-```bash
-pytest tests/ -v --cov=src
-```
-
-3. Run specific test file:
-```bash
-pytest tests/test_config.py -v
-```
-
-Current test coverage:
-- Configuration System: 97% coverage ✓
-- Other components: In progress
-
-## Development Guidelines
-
-1. **Code Quality**:
-   - Use black for formatting
-   - Use flake8 for linting
-   - Use mypy for type checking
-   - Follow PEP 8 style guide
-
-2. **Testing Requirements**:
-   - Write tests for all new code
-   - Maintain >80% coverage
-   - Include edge cases
-   - Use appropriate fixtures
-
-3. **Documentation**:
-   - Update ICD for interface changes
-   - Document all public APIs
-   - Include usage examples
-   - Keep README current
-
-4. **Git Workflow**:
-   - Create feature branches
-   - Write clear commit messages
-   - Update tests with changes
-   - Request reviews for PRs
-
-## Contributing
-
-1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Run tests and linting
-5. Submit a pull request
-
-## License
-
-[Your chosen license]
-
-## Acknowledgments
-
-- Original dataset providers
-- Model developers and maintainers
-- Open-source community contributors
+   - Example configuration:
+   ```yaml
+   model:
+     name: "pixtral"
+     type: "pixtral"
+     version: "1.0"
+     parameters:
+       batch_size: 1
+       # Other model-specific parameters...
+   ```
 
 ## Data Management ✓
 
@@ -322,47 +396,133 @@ The project uses a robust data management system with proper dependency injectio
    data = manager.get_ground_truth("1017")
    ```
 
-## Dependency Injection ✓
+## Testing
 
-The project follows strict dependency injection principles:
+The project uses pytest with comprehensive coverage and proper test isolation:
 
-1. **Constructor Injection**:
-   ```python
-   class Service:
-       def __init__(
-           self,
-           data_loader: BaseDataLoader,
-           model: BaseModel,
-           config: BaseConfig
-       ):
-           self.data_loader = data_loader
-           self.model = model
-           self.config = config
+1. **Test Organization**:
+   ```
+   tests/
+     test_base_model.py         # Interface tests
+     test_model_factory.py      # Factory tests 
+     test_implementations/      # Implementation tests
    ```
 
-2. **Factory Pattern**:
+2. **Fixture Management**:
    ```python
-   class ServiceFactory:
-       def create_service(self) -> BaseService:
-           config = self.create_config()
-           data_loader = self.create_data_loader(config)
-           model = self.create_model(config)
-           return Service(config, data_loader, model)
+   # Reset global state before/after tests
+   @pytest.fixture(autouse=True)
+   def reset_registry():
+       """Clear registry before and after tests."""
+       ModelFactory.MODEL_REGISTRY.clear()
+       yield
+       ModelFactory.MODEL_REGISTRY.clear()
+   
+   # Mock dependencies
+   @pytest.fixture
+   def mock_config_manager():
+       """Create mock config manager."""
+       return Mock(spec=ConfigManager)
+   
+   # Component under test
+   @pytest.fixture
+   def factory(mock_config_manager):
+       """Create factory with mock dependencies."""
+       return ModelFactory(config_manager=mock_config_manager)
    ```
 
-3. **Interface Dependencies**:
-   ```python
-   # Depend on interfaces, not implementations
-   def process_data(data_loader: BaseDataLoader):
-       data = data_loader.load_data()
-       return process(data)
-   ```
+3. **Run all tests**:
+```bash
+pytest tests/ -v
+```
 
-4. **Testing with Mocks**:
-   ```python
-   def test_service():
-       mock_loader = Mock(spec=BaseDataLoader)
-       mock_model = Mock(spec=BaseModel)
-       service = Service(mock_loader, mock_model)
-       assert service.process() == expected
-   ```
+4. **Run with coverage**:
+```bash
+pytest tests/ -v --cov=src
+```
+
+5. **Run specific test file**:
+```bash
+pytest tests/test_model_factory.py -v
+```
+
+Current test coverage:
+- Configuration System: 97% coverage ✓
+- BaseModel Interface: 83% coverage ✓
+- ModelFactory: 95% coverage ✓
+- OutputParser System: 85-90% coverage ✓
+- DataLoader: 94% coverage ✓
+- GroundTruthManager: 96% coverage ✓
+
+## Development Guidelines
+
+1. **Code Quality**:
+   - Use black for formatting
+   - Use flake8 for linting
+   - Use mypy for type checking
+   - Follow PEP 8 style guide
+
+2. **Testing Requirements**:
+   - Write tests for all new code
+   - Maintain >80% coverage
+   - Include edge cases
+   - Use appropriate fixtures
+   - Ensure test isolation 
+   - Mock dependencies properly
+   - Reset global state
+
+3. **Documentation**:
+   - Update ICD for interface changes
+   - Create ADRs for significant decisions
+   - Document all public APIs
+   - Include usage examples
+   - Keep README current
+
+4. **Error Handling**:
+   - Use domain-specific exceptions
+   - Validate input early
+   - Provide detailed error messages
+   - Clean up resources in case of errors
+   - Test error conditions
+
+5. **Git Workflow**:
+   - Create feature branches
+   - Write clear commit messages
+   - Update tests with changes
+   - Request reviews for PRs
+
+## Architecture Decision Records (ADRs)
+
+The project uses ADRs to document significant architectural decisions:
+
+1. **ADR-001: Ground Truth Data Types**
+   - Decisions regarding data type handling for invoice fields
+   - Format preservation vs. normalization tradeoffs
+
+2. **ADR-003: Dependency Injection Patterns**
+   - Standardization of DI across the codebase
+   - Constructor injection as primary pattern
+   - Factory pattern integration
+
+3. **ADR-004: Model Factory Registration Pattern**
+   - Dynamic registration for model implementations
+   - Decoupling factory from concrete implementations
+   - Testing strategy for factories
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch
+3. Make your changes
+4. Run tests and linting
+5. Submit a pull request
+
+## License
+
+[Your chosen license]
+
+## Acknowledgments
+
+- Original dataset providers
+- Model developers and maintainers
+- Open-source community contributors

@@ -1,9 +1,20 @@
 ---
-description: 
-globs: 
+description: Component-Specific Rules
+globs: ["src/**/*.py"]
 alwaysApply: true
 ---
+
 ## Component-Specific Rules
+
+### Data Management
+- Field types must be explicitly defined and documented
+- Data cleaning and normalization must occur during loading
+- Field-specific validation rules:
+  - Work Order Number: Preserve leading zeros and format
+  - Total Amount: Clean currency symbols and normalize decimals
+- Implement robust comparison strategies for each field type
+- Cache normalized data when appropriate
+- Log all data transformations
 
 ### Configuration Management
 - All configuration should be in YAML files

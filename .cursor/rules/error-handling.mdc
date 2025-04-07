@@ -1,9 +1,10 @@
 ---
-description: 
-globs: 
+description: Error Handling Requirements
+globs: ["src/**/*.py"]
 alwaysApply: true
 ---
-## Error Handling
+
+## Error Handling Requirements
 
 ### Error Principles
 - Validate all inputs at the boundaries
@@ -11,6 +12,14 @@ alwaysApply: true
 - Use appropriate exception types
 - Provide clear error messages
 - Clean up resources in case of errors
+
+### Data Validation
+- Validate field types during data loading
+- Implement field-specific validation rules
+- Log validation failures with detailed context
+- Provide helpful error messages for data format issues
+- Include original and attempted normalized values in errors
+- Handle missing or malformed data gracefully
 
 ### Exception Guidelines
 - Create custom exceptions for domain-specific errors

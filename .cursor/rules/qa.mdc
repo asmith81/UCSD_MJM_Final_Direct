@@ -1,9 +1,10 @@
 ---
-description: 
-globs: 
+description: Quality Assurance Requirements
+globs: ["src/**/*.py", "tests/**/*.py"]
 alwaysApply: true
 ---
-## Quality Assurance
+
+## Quality Assurance Requirements
 
 ### Code Quality
 - Maintain consistent style throughout
@@ -18,3 +19,14 @@ alwaysApply: true
 - Include challenging invoices in the test set
 - Document testing approach
 - Handle edge cases appropriately
+
+### Data Validation Testing
+- Test all supported data formats and variations
+- Include edge cases for each field type:
+  - Work Order Number: Leading zeros, special characters
+  - Total Amount: Various currency formats, thousand separators
+- Test data cleaning and normalization
+- Verify error handling for invalid data
+- Test caching behavior with large datasets
+- Validate comparison strategies
+- Document test data formats and variations

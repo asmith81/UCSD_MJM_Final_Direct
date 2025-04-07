@@ -25,6 +25,20 @@ class PromptFactory:
         "locational": LocationalPromptGenerator,
         "step_by_step": StepByStepPromptGenerator
     }
+    
+    def __init__(self, config_manager):
+        """
+        Initialize the factory with required dependencies.
+        
+        Args:
+            config_manager: Configuration manager instance.
+            
+        Raises:
+            ValueError: If config_manager is None
+        """
+        if config_manager is None:
+            raise ValueError("config_manager is required")
+        self._config_manager = config_manager
 
     def create_prompt_generator(self, prompt_name: str, field: str) -> BasePromptGenerator:
         """
@@ -42,8 +56,7 @@ class PromptFactory:
             ConfigurationError: If prompt configuration is invalid
         """
         # Load prompt configuration
-        config_manager = get_config_manager()
-        prompt_config = config_manager.get_config(ConfigType.PROMPT, prompt_name)
+        prompt_config = self._config_manager.get_config(ConfigType.PROMPT, prompt_name)
 
         # Get prompts for the specified field
         field_prompts = prompt_config.get_prompts_by_field(field)

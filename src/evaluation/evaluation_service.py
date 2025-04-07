@@ -6,7 +6,7 @@ from pathlib import Path
 
 from .metrics_calculator import MetricsCalculator
 from .results_manager import ResultsManager
-from ..config import get_config_manager, ConfigType
+from ..config import ConfigType
 
 class EvaluationService:
     """
@@ -14,22 +14,29 @@ class EvaluationService:
     Uses configuration management for evaluation settings.
     """
 
-    def __init__(self, metrics_calculator: MetricsCalculator, results_manager: ResultsManager):
+    def __init__(self, metrics_calculator: MetricsCalculator, results_manager: ResultsManager, config_manager):
         """
         Initialize the evaluation service.
 
         Args:
             metrics_calculator: Calculator for computing evaluation metrics
             results_manager: Manager for storing and retrieving results
+            config_manager: Configuration manager instance
+            
+        Raises:
+            ValueError: If any dependency is None
         """
+        if metrics_calculator is None or results_manager is None or config_manager is None:
+            raise ValueError("All dependencies (metrics_calculator, results_manager, config_manager) are required")
+            
         self.metrics_calculator = metrics_calculator
         self.results_manager = results_manager
+        self._config_manager = config_manager
         self._load_config()
 
     def _load_config(self):
         """Load evaluation configuration."""
-        config_manager = get_config_manager()
-        self.config = config_manager.get_config(ConfigType.EVALUATION)
+        self.config = self._config_manager.get_config(ConfigType.EVALUATION)
         
         # Set up evaluation parameters from config
         self.metrics = self.config.get_metrics()
