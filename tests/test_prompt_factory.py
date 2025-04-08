@@ -94,21 +94,35 @@ class TestPromptFactory:
             # Restore original registry
             PromptFactory.PROMPT_REGISTRY = original_registry
     
-    def test_create_prompt_generator_no_prompts(self, factory, mock_config_manager):
+    def test_create_prompt_generator_no_prompts(self):
         """Test error handling when no prompts are found."""
+        # Create a new mock and factory directly (not using fixtures)
+        mock_config_manager = Mock()
+        mock_config = Mock()
+        mock_config_manager.get_config.return_value = mock_config
+        
         # Set up the mock to return no prompts
-        mock_config_manager.get_config.return_value.get_prompts_by_field.return_value = []
+        mock_config.get_prompts_by_field.return_value = []
+        
+        factory = PromptFactory(mock_config_manager)
         
         # Attempt to create a generator for a field with no prompts
         with pytest.raises(ValueError, match="No prompts found for field"):
             factory.create_prompt_generator("test_prompt", "unknown_field")
     
-    def test_create_prompt_generator_unknown_type(self, factory, mock_config_manager):
+    def test_create_prompt_generator_unknown_type(self):
         """Test error handling for unknown prompt types."""
+        # Create a new mock and factory directly (not using fixtures)
+        mock_config_manager = Mock()
+        mock_config = Mock()
+        mock_config_manager.get_config.return_value = mock_config
+        
         # Set up the mock to return a prompt with unknown type
-        mock_config_manager.get_config.return_value.get_prompts_by_field.return_value = [
+        mock_config.get_prompts_by_field.return_value = [
             {"category": "unknown_type", "template": "Test template"}
         ]
+        
+        factory = PromptFactory(mock_config_manager)
         
         # Attempt to create a generator with unknown type
         with pytest.raises(ValueError, match="Unsupported prompt type"):

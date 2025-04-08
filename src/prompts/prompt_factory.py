@@ -65,7 +65,10 @@ class PromptFactory:
 
         # Get prompt type from configuration
         prompt_type = field_prompts[0].get("category")
-        if not prompt_type or prompt_type not in self.PROMPT_REGISTRY:
+        if not prompt_type:
+            raise ValueError(f"Prompt category not specified for field: {field}")
+            
+        if prompt_type not in self.PROMPT_REGISTRY:
             raise ValueError(f"Unsupported prompt type: {prompt_type}")
 
         # Create prompt generator with configuration

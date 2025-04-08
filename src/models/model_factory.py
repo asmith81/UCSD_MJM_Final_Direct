@@ -141,7 +141,13 @@ class ModelFactory:
                     )
             except Exception as e:
                 if isinstance(e, ModelConfigError):
-                    raise
+                    # Wrap ModelConfigError with a ModelCreationError
+                    raise ModelCreationError(
+                        f"Invalid configuration: {str(e)}",
+                        model_name=model_name,
+                        model_type=model_type,
+                        cause=e
+                    ) from e
                 raise ModelConfigError(
                     f"Configuration validation error: {str(e)}",
                     model_name=model_name
@@ -154,7 +160,13 @@ class ModelFactory:
                 return model
             except Exception as e:
                 if isinstance(e, (ModelInitializationError, ModelResourceError)):
-                    raise
+                    # Wrap with ModelCreationError instead of re-raising directly
+                    raise ModelCreationError(
+                        f"Failed to create model {model_name}",
+                        model_name=model_name,
+                        model_type=model_type,
+                        cause=e
+                    ) from e
                 raise ModelInitializationError(
                     f"Initialization error: {str(e)}",
                     model_name=model_name

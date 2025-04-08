@@ -60,6 +60,14 @@ class MockParser(BaseOutputParser):
         
     def format_output(self, parsed_data):
         return parsed_data
+        
+    def validate_output(self, parsed_output):
+        """Mock validate_output implementation."""
+        return True
+        
+    def normalize_output(self, parsed_output):
+        """Mock normalize_output implementation."""
+        return parsed_output
 
 
 class TestOutputParserInterface:
@@ -131,7 +139,7 @@ class TestOutputParserInterface:
         OutputParserFactory.PARSER_REGISTRY.clear()
         
         # Try to create unknown parser
-        with pytest.raises(ValueError):
+        with pytest.raises(OutputParserCreationError, match="Unsupported parser type"):
             factory.create_parser("unknown_parser")
 
     def test_factory_requires_config_manager(self):
