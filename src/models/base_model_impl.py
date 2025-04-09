@@ -14,15 +14,19 @@ from PIL import Image
 
 from ..config.base_config import BaseConfig
 from .base_model import BaseModel
+from .error_recovery import ErrorRecoveryManager, with_error_recovery
 from .model_errors import (
     ModelInitializationError,
     ModelConfigError, 
     ModelProcessingError,
     ModelResourceError,
     ModelInputError,
-    ModelTimeoutError
+    ModelTimeoutError,
+    ModelLoaderTimeoutError
 )
+from .model_loading_timeout import load_model_with_timeout
 from .model_resource_manager import ModelResourceManager
+from .retry_utils import RetryConfig, with_retry
 
 # Set up logger for this module
 logger = logging.getLogger(__name__)
@@ -48,7 +52,15 @@ class BaseModelImpl(BaseModel, ABC):
         self._is_initialized = False
         self._resource_manager = None
         self._config = None
-        self._timeout_seconds = 60.0  # Default timeout
+        self._timeout_seconds = 60.0  # Default processing timeout
+        self._loading_timeout_seconds = 300.0  # Default loading timeout (5 min)
+        self._retry_config = RetryConfig(
+            max_attempts=3,
+            delay_seconds=1.0,
+            backoff_factor=2.0,
+            max_delay_seconds=30.0
+        )
+        self._recovery_manager = None
         
     def initialize(self, config: BaseConfig) -> None:
         """
@@ -66,6 +78,7 @@ class BaseModelImpl(BaseModel, ABC):
             ModelInitializationError: If initialization fails
             ModelConfigError: If configuration is invalid
             ModelResourceError: If required resources cannot be loaded
+            ModelLoaderTimeoutError: If loading exceeds time limit
         """
         try:
             # Validate configuration
@@ -79,15 +92,21 @@ class BaseModelImpl(BaseModel, ABC):
             self._config = config
             self._model_name = self._get_model_name(config)
             
-            # Get timeout from config if available
+            # Get timeouts from config if available
             self._timeout_seconds = config.get_value("timeout_seconds", self._timeout_seconds)
+            self._loading_timeout_seconds = config.get_value("loading_timeout_seconds", self._loading_timeout_seconds)
             
             # Create resource manager
             self._resource_manager = ModelResourceManager(self._model_name)
             
-            # Call implementation-specific initialization
+            # Create recovery manager
+            self._recovery_manager = ErrorRecoveryManager(self._resource_manager, self._model_name)
+            
+            # Call implementation-specific initialization with timeout
             logger.info(f"Initializing model: {self._model_name}")
-            self._initialize_impl(config)
+            
+            # Load the model with timeout handling
+            self._load_model_with_timeout(config)
             
             # Mark as initialized
             self._is_initialized = True
@@ -97,11 +116,15 @@ class BaseModelImpl(BaseModel, ABC):
             # Re-raise configuration errors
             raise
         except ModelInitializationError as e:
-            # Re-raise initialization errors
+            # Re-raise initialization errors after cleanup
             self._cleanup_resources()
             raise
         except ModelResourceError as e:
-            # Re-raise resource errors
+            # Re-raise resource errors after cleanup
+            self._cleanup_resources()
+            raise
+        except ModelLoaderTimeoutError as e:
+            # Re-raise timeout errors after cleanup
             self._cleanup_resources()
             raise
         except Exception as e:
@@ -113,6 +136,40 @@ class BaseModelImpl(BaseModel, ABC):
                 model_name=self._model_name
             ) from e
     
+    def _load_model_with_timeout(self, config: BaseConfig) -> None:
+        """
+        Load the model with timeout handling.
+        
+        Args:
+            config: Validated model configuration
+            
+        Raises:
+            ModelLoaderTimeoutError: If loading exceeds time limit
+            ModelInitializationError: If initialization fails
+            ModelResourceError: If required resources cannot be loaded
+        """
+        try:
+            # Create loader function that will be executed with timeout
+            def loader_func():
+                return self._initialize_impl(config)
+                
+            # Load model with timeout
+            load_model_with_timeout(
+                loader_func,
+                self._loading_timeout_seconds,
+                model_name=self._model_name,
+                component="model_initialization"
+            )
+            
+        except TimeoutError as e:
+            # Convert generic TimeoutError to ModelLoaderTimeoutError
+            raise ModelLoaderTimeoutError(
+                "Model initialization timed out",
+                model_name=self._model_name,
+                timeout_seconds=self._loading_timeout_seconds
+            ) from e
+    
+    @with_error_recovery(operation_name="process_image")
     def process_image(self, image_path: Path) -> Dict[str, Any]:
         """
         Process an invoice image and extract information.
@@ -155,10 +212,10 @@ class BaseModelImpl(BaseModel, ABC):
             except TimeoutError:
                 elapsed = time.time() - start_time
                 raise ModelTimeoutError(
-                    "Image processing timed out",
+                    f"Image processing timed out after {elapsed:.1f}s",
                     model_name=self._model_name,
                     image_path=str(image_path),
-                    timeout_seconds=self._timeout_seconds
+                    timeout_seconds=elapsed
                 )
                 
             # Return processed results
@@ -198,28 +255,147 @@ class BaseModelImpl(BaseModel, ABC):
         Raises:
             ModelConfigError: If configuration is invalid
         """
-        # Check basic required fields
-        required_fields = ["name", "type", "version"]
-        for field in required_fields:
-            if not config.has_value(field):
+        try:
+            # Check for basic required fields
+            if not config:
                 raise ModelConfigError(
-                    f"Missing required configuration field",
-                    model_name=self._get_model_name(config),
-                    parameter=field
+                    "Configuration is empty",
+                    model_name=self._get_model_name(config)
                 )
+                
+            # Call implementation-specific validation
+            return self._validate_config_impl(config)
+            
+        except ModelConfigError:
+            # Re-raise ModelConfigError
+            raise
+        except Exception as e:
+            # Wrap other exceptions in ModelConfigError
+            model_name = self._get_model_name(config)
+            raise ModelConfigError(
+                f"Unexpected error during configuration validation: {str(e)}",
+                model_name=model_name
+            ) from e
+    
+    def _validate_initialization(self) -> None:
+        """
+        Validate that the model is initialized.
         
-        # Call implementation-specific validation
-        return self._validate_config_impl(config)
+        Raises:
+            ModelInitializationError: If model is not initialized
+        """
+        if not self._is_initialized:
+            raise ModelInitializationError(
+                "Model is not initialized. Call initialize() first.",
+                model_name=self._model_name
+            )
+    
+    @with_retry()
+    def _process_image_with_timeout(self, image: Image.Image, image_path: Path) -> Dict[str, Any]:
+        """
+        Process image with timeout handling and retry support.
+        
+        Args:
+            image: Validated PIL Image
+            image_path: Path to the image file
+            
+        Returns:
+            Dict containing extracted information
+            
+        Raises:
+            ModelProcessingError: If processing fails
+            ModelTimeoutError: If processing exceeds time limit
+        """
+        # Execute with timeout
+        with self._recovery_manager.recovery_context("image_processing"):
+            try:
+                start_time = time.time()
+                
+                # Process with timeout
+                def processing_func():
+                    return self._process_image_impl(image, image_path)
+                    
+                # Use ThreadPoolExecutor for timeout
+                return load_model_with_timeout(
+                    processing_func, 
+                    self._timeout_seconds,
+                    model_name=self._model_name,
+                    component="image_processing",
+                    resource_name=str(image_path)
+                )
+                
+            except TimeoutError:
+                elapsed = time.time() - start_time
+                raise ModelTimeoutError(
+                    "Image processing operation timed out",
+                    model_name=self._model_name,
+                    image_path=str(image_path),
+                    timeout_seconds=elapsed
+                )
+                
+    def _load_and_validate_image(self, image_path: Path) -> Image.Image:
+        """
+        Load and validate an image file.
+        
+        Args:
+            image_path: Path to the image file
+            
+        Returns:
+            PIL Image object
+            
+        Raises:
+            ModelInputError: If image is invalid or corrupt
+        """
+        try:
+            # Load image with PIL
+            image = Image.open(image_path)
+            
+            # Validate image
+            if not image:
+                raise ModelInputError(
+                    "Failed to load image",
+                    model_name=self._model_name,
+                    input_name="image_path",
+                    input_value=str(image_path)
+                )
+                
+            # Ensure image is loaded
+            image.load()
+            
+            return image
+            
+        except (IOError, OSError) as e:
+            # Handle PIL errors
+            raise ModelInputError(
+                f"Invalid or corrupt image file: {str(e)}",
+                model_name=self._model_name,
+                input_name="image_path",
+                input_value=str(image_path)
+            ) from e
+    
+    def _cleanup_resources(self) -> None:
+        """Clean up resources after initialization failure."""
+        if self._resource_manager:
+            try:
+                self._resource_manager.close_all()
+                logger.debug("Cleaned up resources after initialization failure")
+            except Exception as e:
+                logger.warning(f"Error cleaning up resources: {str(e)}")
+    
+    def _get_model_name(self, config: Optional[BaseConfig] = None) -> Optional[str]:
+        """Get model name from config or instance variable."""
+        if self._model_name:
+            return self._model_name
+            
+        if config and config.has_value("name"):
+            return config.get_value("name")
+            
+        return self.__class__.__name__
     
     @abstractmethod
     def _initialize_impl(self, config: BaseConfig) -> None:
         """
         Implementation-specific initialization.
-        
-        This method should:
-        1. Load model weights and resources
-        2. Configure model parameters
-        3. Set up any required processing pipelines
         
         Args:
             config: Validated model configuration
@@ -229,20 +405,15 @@ class BaseModelImpl(BaseModel, ABC):
             ModelResourceError: If required resources cannot be loaded
         """
         pass
-    
+        
     @abstractmethod
     def _process_image_impl(self, image: Image.Image, image_path: Path) -> Dict[str, Any]:
         """
         Implementation-specific image processing.
         
-        This method should:
-        1. Process the validated image
-        2. Extract structured information
-        3. Return data in standardized format
-        
         Args:
             image: Validated PIL Image
-            image_path: Original path to the image
+            image_path: Path to the image file
             
         Returns:
             Dict containing extracted information
@@ -251,19 +422,14 @@ class BaseModelImpl(BaseModel, ABC):
             ModelProcessingError: If processing fails
         """
         pass
-    
+        
     @abstractmethod
     def _validate_config_impl(self, config: BaseConfig) -> bool:
         """
         Implementation-specific configuration validation.
         
-        This method should:
-        1. Validate implementation-specific configuration
-        2. Check for required parameters
-        3. Verify parameter values
-        
         Args:
-            config: Model configuration to validate
+            config: Model configuration
             
         Returns:
             True if configuration is valid
@@ -271,110 +437,4 @@ class BaseModelImpl(BaseModel, ABC):
         Raises:
             ModelConfigError: If configuration is invalid
         """
-        pass
-    
-    def _validate_initialization(self) -> None:
-        """
-        Validate that the model has been initialized.
-        
-        Raises:
-            ModelInitializationError: If model is not initialized
-        """
-        if not self._is_initialized:
-            raise ModelInitializationError(
-                "Model has not been initialized",
-                model_name=self._model_name
-            )
-    
-    def _get_model_name(self, config: Optional[BaseConfig] = None) -> str:
-        """
-        Get the model name from configuration or fallback.
-        
-        Args:
-            config: Optional configuration
-            
-        Returns:
-            Model name string
-        """
-        if self._model_name:
-            return self._model_name
-        
-        if config and config.has_value("name"):
-            return config.get_value("name")
-        
-        return self.__class__.__name__
-    
-    def _cleanup_resources(self) -> None:
-        """
-        Clean up all resources.
-        Safe to call multiple times.
-        """
-        if self._resource_manager:
-            logger.debug(f"Cleaning up resources for model: {self._model_name}")
-            self._resource_manager.close_all()
-    
-    def _load_and_validate_image(self, image_path: Path) -> Image.Image:
-        """
-        Load and validate an image.
-        
-        Args:
-            image_path: Path to image file
-            
-        Returns:
-            Validated PIL Image
-            
-        Raises:
-            ModelInputError: If image is invalid
-            ModelResourceError: If image cannot be loaded
-        """
-        try:
-            with self._resource_manager.open_file(image_path, 'rb') as f:
-                image = Image.open(f)
-                image.load()  # Ensure image is loaded fully
-                
-                # Validate image
-                if image.mode not in ['RGB', 'RGBA', 'L']:
-                    raise ModelInputError(
-                        f"Unsupported image mode",
-                        model_name=self._model_name,
-                        input_name=str(image_path),
-                        input_value=image.mode,
-                        expected="RGB, RGBA, or L"
-                    )
-                
-                # Return validated image
-                return image
-                
-        except (IOError, OSError) as e:
-            raise ModelResourceError(
-                f"Failed to load image: {str(e)}",
-                model_name=self._model_name,
-                resource_type="image_file",
-                resource_name=str(image_path)
-            ) from e
-    
-    def _process_image_with_timeout(self, image: Image.Image, image_path: Path) -> Dict[str, Any]:
-        """
-        Process image with timeout handling.
-        
-        Args:
-            image: Validated PIL Image
-            image_path: Original path to the image
-            
-        Returns:
-            Processed results
-            
-        Raises:
-            TimeoutError: If processing exceeds timeout
-            ModelProcessingError: If processing fails
-        """
-        # TODO: Implement proper timeout mechanism
-        # Current implementation doesn't truly enforce timeout
-        # This would be better with concurrent.futures or similar
-        
-        # For now, just call implementation
-        return self._process_image_impl(image, image_path)
-    
-    def __del__(self) -> None:
-        """Clean up resources when object is garbage collected."""
-        self._cleanup_resources() 
+        pass 

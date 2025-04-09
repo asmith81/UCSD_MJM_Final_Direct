@@ -10,13 +10,16 @@ from pathlib import Path
 import logging
 
 from .base_model import BaseModel
+from .error_recovery import ErrorRecoveryManager, with_error_recovery
 from .model_errors import (
     ModelError,
     ModelInitializationError,
     ModelConfigError,
     ModelResourceError,
-    ModelCreationError
+    ModelCreationError,
+    ModelLoaderTimeoutError
 )
+from .retry_utils import RetryConfig, with_retry
 from ..config.base_config import BaseConfig
 from ..config import get_config_manager, ConfigType
 from ..config.implementations.model_config import ModelConfig
@@ -57,7 +60,19 @@ class ModelFactory:
         if config_manager is None:
             raise ValueError("config_manager is required")
         self._config_manager = config_manager
+        self._retry_config = RetryConfig(
+            max_attempts=2,
+            delay_seconds=1.0,
+            backoff_factor=2.0,
+            max_delay_seconds=10.0,
+            non_retryable_exceptions=[
+                ModelConfigError,  # Configuration errors shouldn't be retried
+                ModelCreationError  # Creation errors typically won't be resolved by retry
+            ]
+        )
 
+    @with_error_recovery(operation_name="create_model")
+    @with_retry()
     def create_model(self, model_name: str, model_config: Optional[BaseConfig] = None) -> BaseModel:
         """
         Create and initialize a model instance.
@@ -80,9 +95,12 @@ class ModelFactory:
             ModelCreationError: If model creation or initialization fails
             ModelConfigError: If configuration is invalid
             ModelResourceError: If required resources cannot be loaded
-            ValueError: If model type is not supported (deprecated)
+            ModelInitializationError: If model initialization fails
+            ModelLoaderTimeoutError: If model loading times out
         """
         model_type = None
+        recovery_manager = ErrorRecoveryManager(model_name=model_name)
+        
         try:
             logger.info(f"Creating model '{model_name}'")
             
@@ -90,6 +108,8 @@ class ModelFactory:
             try:
                 config = model_config or self._load_model_config(model_name)
             except Exception as e:
+                if isinstance(e, ModelConfigError):
+                    raise
                 raise ModelConfigError(
                     f"Failed to load configuration: {str(e)}",
                     model_name=model_name
@@ -123,6 +143,14 @@ class ModelFactory:
                 model_class = self.MODEL_REGISTRY[model_type]
                 model = model_class()
                 logger.debug(f"Created instance of {model_class.__name__}")
+                
+                # Register cleanup if initialization fails
+                def cleanup_model():
+                    logger.debug(f"Cleaning up model instance during error recovery")
+                    if hasattr(model, '_cleanup_resources'):
+                        model._cleanup_resources()
+                
+                recovery_manager.register_recovery_action(cleanup_model)
             except Exception as e:
                 raise ModelCreationError(
                     f"Failed to instantiate model class: {str(e)}",
@@ -141,13 +169,9 @@ class ModelFactory:
                     )
             except Exception as e:
                 if isinstance(e, ModelConfigError):
-                    # Wrap ModelConfigError with a ModelCreationError
-                    raise ModelCreationError(
-                        f"Invalid configuration: {str(e)}",
-                        model_name=model_name,
-                        model_type=model_type,
-                        cause=e
-                    ) from e
+                    # Don't wrap ModelConfigError with a ModelCreationError
+                    # This allows the original error to propagate
+                    raise
                 raise ModelConfigError(
                     f"Configuration validation error: {str(e)}",
                     model_name=model_name
@@ -159,14 +183,11 @@ class ModelFactory:
                 logger.info(f"Successfully initialized model '{model_name}' (type: {model_type})")
                 return model
             except Exception as e:
-                if isinstance(e, (ModelInitializationError, ModelResourceError)):
-                    # Wrap with ModelCreationError instead of re-raising directly
-                    raise ModelCreationError(
-                        f"Failed to create model {model_name}",
-                        model_name=model_name,
-                        model_type=model_type,
-                        cause=e
-                    ) from e
+                # Preserve the original error types for better error handling
+                # ModelInitializationError, ModelResourceError, and ModelLoaderTimeoutError should propagate directly
+                if isinstance(e, (ModelInitializationError, ModelResourceError, ModelLoaderTimeoutError)):
+                    raise
+                # If it's some other exception, wrap in ModelInitializationError 
                 raise ModelInitializationError(
                     f"Initialization error: {str(e)}",
                     model_name=model_name
@@ -203,36 +224,49 @@ class ModelFactory:
         try:
             config = self._config_manager.get_config(ConfigType.MODEL, model_name)
             if not isinstance(config, ModelConfig):
+                actual_type = type(config).__name__
                 raise ModelConfigError(
-                    f"Invalid configuration type: expected ModelConfig, got {type(config).__name__}",
-                    model_name=model_name
+                    f"Invalid configuration type",
+                    model_name=model_name,
+                    parameter="config_type",
+                    value=actual_type,
+                    expected="ModelConfig"
                 )
             return config
         except Exception as e:
             if isinstance(e, ModelConfigError):
                 raise
             raise ModelConfigError(
-                f"Failed to load configuration: {str(e)}",
+                f"Failed to load model configuration: {str(e)}",
                 model_name=model_name
             ) from e
-
+    
     @classmethod
     def register_model(cls, model_type: str, model_class: Type[BaseModel]) -> None:
         """
-        Register a new model implementation.
+        Register a model implementation with the factory.
 
         Args:
-            model_type: Type identifier for the model
+            model_type: String identifier for the model type
             model_class: Model class implementing BaseModel
-
+            
         Raises:
-            ValueError: If model_type is invalid or model_class doesn't implement BaseModel
+            ValueError: If model_type is already registered
         """
-        if not model_type or not isinstance(model_type, str):
-            raise ValueError("Model type must be a non-empty string")
-        
-        if not isinstance(model_class, type) or not issubclass(model_class, BaseModel):
-            raise ValueError("Model class must implement BaseModel interface")
-
-        logger.debug(f"Registering model type '{model_type}' with implementation {model_class.__name__}")
+        if model_type in cls.MODEL_REGISTRY:
+            raise ValueError(f"Model type '{model_type}' is already registered")
+            
+        if not issubclass(model_class, BaseModel):
+            raise ValueError(f"Model class must implement BaseModel interface")
+            
         cls.MODEL_REGISTRY[model_type] = model_class
+        logger.debug(f"Registered model implementation: {model_type} -> {model_class.__name__}")
+    
+    @classmethod
+    def get_registered_model_types(cls) -> Dict[str, Type[BaseModel]]:
+        """Get a copy of the registered model types.
+        
+        Returns:
+            Dict mapping model type names to model classes
+        """
+        return cls.MODEL_REGISTRY.copy()

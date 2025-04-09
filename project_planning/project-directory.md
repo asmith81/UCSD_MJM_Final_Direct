@@ -35,21 +35,33 @@ invoice-extraction-comparison/
 │   ├── __init__.py
 │   │
 │   ├── config/                      # Configuration management
-│   │   ├── __init__.py
-│   │   ├── base_config.py           # Base configuration interface
-│   │   ├── config_factory.py        # Factory for creating config objects
-│   │   ├── config_loader.py         # Load configuration from YAML
-│   │   └── implementations/         # Configuration implementations
-│   │       ├── __init__.py
-│   │       ├── model_config.py      # Model configuration implementation
-│   │       ├── prompt_config.py     # Prompt configuration implementation
-│   │       └── evaluation_config.py # Evaluation configuration implementation
+│   │   ├── __init__.py              # Exports public interfaces
+│   │   ├── base_config.py           # Abstract base class for configs
+│   │   ├── config_loader.py         # Configuration loading service
+│   │   ├── config_factory.py        # Factory for config objects
+│   │   ├── config_parser.py         # Protocol for config parsing
+│   │   └── implementations/         # Concrete implementations
+│   │       ├── __init__.py          # Implementation exports
+│   │       ├── model_config.py      # Model configuration
+│   │       ├── prompt_config.py     # Prompt configuration
+│   │       └── evaluation_config.py # Evaluation configuration
 │   │
-│   ├── data/                        # Data handling
-│   │   ├── __init__.py
-│   │   ├── data_loader.py           # Load images and ground truth
-│   │   ├── image_processor.py       # Basic image preprocessing
-│   │   └── ground_truth_manager.py  # Ground truth handling
+│   ├── validation/                  # Validation utilities
+│   │   ├── __init__.py              # Exports public interfaces
+│   │   ├── validation_result.py     # Validation result class
+│   │   ├── model_config_validator.py # Model config validator interface
+│   │   └── implementations/         # Concrete implementations
+│   │       ├── __init__.py          # Implementation exports
+│   │       └── basic_model_validator.py # Basic model validator
+│   │
+│   ├── data/                        # Data management
+│   │   ├── __init__.py              # Exports public interfaces
+│   │   ├── base_data_loader.py      # Abstract base class for data loading
+│   │   ├── data_loader_factory.py   # Factory for data loader objects
+│   │   ├── ground_truth_manager.py  # Ground truth handling
+│   │   └── implementations/         # Concrete implementations
+│   │       ├── __init__.py          # Implementation exports
+│   │       └── csv_data_loader.py   # CSV-based data loader
 │   │
 │   ├── models/                      # Model implementations
 │   │   ├── __init__.py

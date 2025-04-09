@@ -4,21 +4,28 @@ Model Error Hierarchy.
 This module defines a comprehensive hierarchy of exceptions for model-related errors.
 Each exception type provides detailed context and appropriate error messaging.
 """
-from typing import Any, Optional
+from typing import Any, Optional, Dict
 
 
 class ModelError(Exception):
     """Base exception for all model-related errors."""
     
-    def __init__(self, message: str, model_name: Optional[str] = None):
+    def __init__(
+        self, 
+        message: str, 
+        model_name: Optional[str] = None,
+        context: Optional[Dict[str, Any]] = None
+    ):
         """
         Initialize with error message and optional context.
         
         Args:
             message: Error message describing the issue
             model_name: Optional name of the model where error occurred
+            context: Optional dictionary with additional error context
         """
         self.model_name = model_name
+        self.context = context or {}
         prefix = f"[{model_name}] " if model_name else ""
         super().__init__(f"{prefix}{message}")
 
@@ -38,7 +45,8 @@ class ModelInitializationError(ModelError):
         self, 
         message: str, 
         model_name: Optional[str] = None,
-        component: Optional[str] = None
+        component: Optional[str] = None,
+        context: Optional[Dict[str, Any]] = None
     ):
         """
         Initialize with error details.
@@ -47,10 +55,15 @@ class ModelInitializationError(ModelError):
             message: Error message describing the initialization failure
             model_name: Optional name of the model
             component: Optional component that failed to initialize
+            context: Optional dictionary with additional error context
         """
         self.component = component
+        context = context or {}
+        if component:
+            context["component"] = component
+            
         component_info = f" in component '{component}'" if component else ""
-        super().__init__(f"Initialization failed{component_info}: {message}", model_name)
+        super().__init__(f"Initialization failed{component_info}: {message}", model_name, context)
 
 
 class ModelConfigError(ModelError):
@@ -69,7 +82,8 @@ class ModelConfigError(ModelError):
         model_name: Optional[str] = None,
         parameter: Optional[str] = None,
         value: Any = None,
-        expected: Any = None
+        expected: Any = None,
+        context: Optional[Dict[str, Any]] = None
     ):
         """
         Initialize with configuration error details.
@@ -80,10 +94,19 @@ class ModelConfigError(ModelError):
             parameter: Optional name of the invalid parameter
             value: Optional invalid value provided
             expected: Optional description of expected value
+            context: Optional dictionary with additional error context
         """
         self.parameter = parameter
         self.value = value
         self.expected = expected
+        
+        context = context or {}
+        if parameter:
+            context["parameter"] = parameter
+        if value is not None:
+            context["value"] = value
+        if expected is not None:
+            context["expected"] = expected
         
         if parameter:
             if value is not None and expected is not None:
@@ -93,7 +116,7 @@ class ModelConfigError(ModelError):
             else:
                 message = f"Invalid configuration parameter '{parameter}': {message}"
                 
-        super().__init__(message, model_name)
+        super().__init__(message, model_name, context)
 
 
 class ModelResourceError(ModelError):
@@ -112,7 +135,8 @@ class ModelResourceError(ModelError):
         message: str, 
         model_name: Optional[str] = None,
         resource_type: Optional[str] = None,
-        resource_name: Optional[str] = None
+        resource_name: Optional[str] = None,
+        context: Optional[Dict[str, Any]] = None
     ):
         """
         Initialize with resource error details.
@@ -122,9 +146,16 @@ class ModelResourceError(ModelError):
             model_name: Optional name of the model
             resource_type: Optional type of resource (memory, file, etc.)
             resource_name: Optional name/identifier of the resource
+            context: Optional dictionary with additional error context
         """
         self.resource_type = resource_type
         self.resource_name = resource_name
+        
+        context = context or {}
+        if resource_type:
+            context["resource_type"] = resource_type
+        if resource_name:
+            context["resource_name"] = resource_name
         
         resource_info = ""
         if resource_type and resource_name:
@@ -134,7 +165,7 @@ class ModelResourceError(ModelError):
         elif resource_name:
             resource_info = f" for '{resource_name}'"
             
-        super().__init__(f"Resource error{resource_info}: {message}", model_name)
+        super().__init__(f"Resource error{resource_info}: {message}", model_name, context)
 
 
 class ModelProcessingError(ModelError):
@@ -153,7 +184,8 @@ class ModelProcessingError(ModelError):
         message: str, 
         model_name: Optional[str] = None,
         image_path: Optional[str] = None,
-        processing_stage: Optional[str] = None
+        processing_stage: Optional[str] = None,
+        context: Optional[Dict[str, Any]] = None
     ):
         """
         Initialize with processing error details.
@@ -163,18 +195,25 @@ class ModelProcessingError(ModelError):
             model_name: Optional name of the model
             image_path: Optional path of the image being processed
             processing_stage: Optional stage where processing failed
+            context: Optional dictionary with additional error context
         """
         self.image_path = image_path
         self.processing_stage = processing_stage
         
-        context = []
+        context = context or {}
         if image_path:
-            context.append(f"image '{image_path}'")
+            context["image_path"] = image_path
         if processing_stage:
-            context.append(f"during {processing_stage}")
+            context["processing_stage"] = processing_stage
+        
+        context_parts = []
+        if image_path:
+            context_parts.append(f"image '{image_path}'")
+        if processing_stage:
+            context_parts.append(f"during {processing_stage}")
             
-        context_str = " " + ", ".join(context) if context else ""
-        super().__init__(f"Processing failed{context_str}: {message}", model_name)
+        context_str = " " + ", ".join(context_parts) if context_parts else ""
+        super().__init__(f"Processing failed{context_str}: {message}", model_name, context)
 
 
 class ModelInputError(ModelError):
@@ -193,7 +232,8 @@ class ModelInputError(ModelError):
         model_name: Optional[str] = None,
         input_name: Optional[str] = None,
         input_value: Any = None,
-        expected: Any = None
+        expected: Any = None,
+        context: Optional[Dict[str, Any]] = None
     ):
         """
         Initialize with input error details.
@@ -204,10 +244,19 @@ class ModelInputError(ModelError):
             input_name: Optional name of the invalid input
             input_value: Optional invalid value provided
             expected: Optional description of expected value
+            context: Optional dictionary with additional error context
         """
         self.input_name = input_name
         self.input_value = input_value
         self.expected = expected
+        
+        context = context or {}
+        if input_name:
+            context["input_name"] = input_name
+        if input_value is not None:
+            context["input_value"] = input_value
+        if expected is not None:
+            context["expected"] = expected
         
         if input_name:
             if input_value is not None and expected is not None:
@@ -217,7 +266,7 @@ class ModelInputError(ModelError):
             else:
                 message = f"Invalid input '{input_name}': {message}"
                 
-        super().__init__(message, model_name)
+        super().__init__(message, model_name, context)
 
 
 class ModelTimeoutError(ModelProcessingError):
@@ -235,7 +284,8 @@ class ModelTimeoutError(ModelProcessingError):
         message: str, 
         model_name: Optional[str] = None,
         image_path: Optional[str] = None,
-        timeout_seconds: Optional[float] = None
+        timeout_seconds: Optional[float] = None,
+        context: Optional[Dict[str, Any]] = None
     ):
         """
         Initialize with timeout error details.
@@ -245,21 +295,73 @@ class ModelTimeoutError(ModelProcessingError):
             model_name: Optional name of the model
             image_path: Optional path of the image being processed
             timeout_seconds: Optional timeout threshold in seconds
+            context: Optional dictionary with additional error context
         """
         self.timeout_seconds = timeout_seconds
         
-        timeout_info = f" after {timeout_seconds}s" if timeout_seconds is not None else ""
-        super().__init__(f"Timeout{timeout_info}: {message}", model_name, image_path, "inference")
+        context = context or {}
+        if timeout_seconds is not None:
+            context["timeout_seconds"] = timeout_seconds
+            
+        timeout_info = f" after {timeout_seconds:.1f}s" if timeout_seconds else ""
+        super().__init__(f"Operation timed out{timeout_info}: {message}", model_name, image_path, "processing", context)
+
+
+class ModelLoaderTimeoutError(ModelInitializationError):
+    """
+    Raised when model loading exceeds time limits.
+    
+    This exception indicates issues with:
+    - Model weight loading taking too long
+    - Resource allocation delays
+    - Network or disk I/O bottlenecks
+    - External service dependencies
+    """
+    
+    def __init__(
+        self, 
+        message: str, 
+        model_name: Optional[str] = None,
+        component: Optional[str] = None,
+        resource_name: Optional[str] = None,
+        timeout_seconds: Optional[float] = None,
+        context: Optional[Dict[str, Any]] = None
+    ):
+        """
+        Initialize with loader timeout details.
+        
+        Args:
+            message: Error message describing the timeout issue
+            model_name: Optional name of the model
+            component: Optional component where loading timed out
+            resource_name: Optional name of the resource being loaded
+            timeout_seconds: Optional timeout threshold in seconds
+            context: Optional dictionary with additional error context
+        """
+        self.resource_name = resource_name
+        self.timeout_seconds = timeout_seconds
+        
+        context = context or {}
+        if resource_name:
+            context["resource_name"] = resource_name
+        if timeout_seconds is not None:
+            context["timeout_seconds"] = timeout_seconds
+        
+        resource_info = f" resource '{resource_name}'" if resource_name else ""
+        timeout_info = f" after {timeout_seconds:.1f}s" if timeout_seconds else ""
+        
+        error_message = f"Loading{resource_info} timed out{timeout_info}: {message}"
+        super().__init__(error_message, model_name, component, context)
 
 
 class ModelCreationError(ModelError):
     """
-    Raised when model creation fails.
+    Raised when model creation fails in the factory.
     
     This exception indicates issues with:
+    - Unsupported model types
     - Factory configuration
-    - Model registration
-    - Dependency resolution
+    - Implementation registration
     """
     
     def __init__(
@@ -267,23 +369,27 @@ class ModelCreationError(ModelError):
         message: str, 
         model_name: Optional[str] = None,
         model_type: Optional[str] = None,
-        cause: Optional[Exception] = None
+        cause: Optional[Exception] = None,
+        context: Optional[Dict[str, Any]] = None
     ):
         """
         Initialize with creation error details.
         
         Args:
             message: Error message describing the creation issue
-            model_name: Optional name of the model being created
-            model_type: Optional type of the model being created
-            cause: Optional underlying exception that caused this error
+            model_name: Optional name of the model
+            model_type: Optional type of model being created
+            cause: Optional exception that caused this error
+            context: Optional dictionary with additional error context
         """
         self.model_type = model_type
         self.cause = cause
         
-        if model_type and model_type != model_name:
-            type_info = f" (type: {model_type})"
-        else:
-            type_info = ""
-            
-        super().__init__(f"Creation failed{type_info}: {message}", model_name) 
+        context = context or {}
+        if model_type:
+            context["model_type"] = model_type
+        if cause:
+            context["cause"] = str(cause)
+        
+        type_info = f" of type '{model_type}'" if model_type else ""
+        super().__init__(f"Creation failed{type_info}: {message}", model_name, context) 

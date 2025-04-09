@@ -210,10 +210,10 @@ class TestModelFactory:
         factory = ModelFactory(config_manager)
         
         # Attempt to create model
-        with pytest.raises(ModelCreationError) as excinfo:
+        with pytest.raises(ModelConfigError) as excinfo:
             factory.create_model("test_model")
             
-        assert "Invalid configuration" in str(excinfo.value)
+        assert "Configuration validation failed" in str(excinfo.value)
     
     def test_create_model_unknown_type(self, clean_registry, config_manager):
         """Test error handling for unknown model type."""
@@ -271,10 +271,10 @@ class TestModelFactory:
         factory = ModelFactory(config_manager)
         
         # Attempt to create model
-        with pytest.raises(ModelCreationError) as excinfo:
+        with pytest.raises(ModelInitializationError) as excinfo:
             factory.create_model("test_model")
             
-        assert "Failed to create model" in str(excinfo.value)
+        assert "Initialization failed" in str(excinfo.value)
     
     def test_create_model_resource_error(self, clean_registry, config_manager):
         """Test error handling for resource error."""
@@ -285,10 +285,10 @@ class TestModelFactory:
         factory = ModelFactory(config_manager)
         
         # Attempt to create model
-        with pytest.raises(ModelCreationError) as excinfo:
+        with pytest.raises(ModelResourceError) as excinfo:
             factory.create_model("test_model")
             
-        assert "Failed to create model" in str(excinfo.value)
+        assert "Resource not available" in str(excinfo.value)
     
     def test_create_model_unexpected_error(self, clean_registry, config_manager):
         """Test error handling for unexpected errors."""

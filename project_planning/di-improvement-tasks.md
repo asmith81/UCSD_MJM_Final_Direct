@@ -44,6 +44,29 @@ Our codebase effectively uses dependency injection as a core architectural patte
 - [ ] Highlight optional vs. required dependencies
 - [ ] Expand existing test fixtures to validate dependency behavior
 
+### High Priority
+
+#### Create an interface-based configuration system
+Create abstract base classes and protocols for configuration components to allow for different implementations. This should include separate interfaces for model configuration, prompt configuration, and evaluation configuration.
+
+#### Implement a factory for configuration objects
+Create a factory class that can instantiate the appropriate configuration object based on runtime parameters, allowing for flexibility in configuration selection.
+
+#### Set up dependency injection for the main components
+Implement a DI container that can register and resolve dependencies for major components like model handlers, data loaders, and configuration services.
+
+#### Create a modular data loading system with DI
+Refactor the data loading system to use interfaces and DI, allowing for different data sources to be used interchangeably through the same interface.
+
+#### Implement model configuration validation utilities
+Create a validation system that can verify model configurations against API requirements and resource constraints before runtime execution. This should include validation result classes, validator interfaces, and basic validator implementations.
+
+#### Replace direct imports with DI container usage
+- [ ] Replace direct imports with DI container usage throughout the codebase
+- [ ] Refactor model execution to use DI container
+
+### Medium Priority
+
 ## Completion Criteria
 - All Phase 2 and 3 components follow consistent DI patterns
 - Factory classes handle dependency creation uniformly
@@ -58,7 +81,16 @@ Our codebase effectively uses dependency injection as a core architectural patte
   - ExtractedFieldsOutputParser with injectable validator dependencies
   - High test coverage (85-100%) with test fixtures demonstrating DI benefits
 
+- Model Configuration Validation Utilities implemented with proper DI patterns:
+  - ValidationResult class for standardized validation results
+  - ModelConfigValidator interface for consistent validator behavior
+  - Injectable validators through constructor dependency injection
+  - CompositeValidator demonstrating composition of validators
+  - Integration with BaseModelImpl through template method pattern
+  - Follows interface-based design principles outlined in ADR-006
+
 ## References
 - [ADR-003: Dependency Injection Patterns](../docs/adr/003-dependency-injection-patterns.md)
+- [ADR-006: Model Configuration Validation Utilities](../docs/adr/006-model-configuration-validation.md)
 - [Project Rules: Dependency Injection Section](project-rules.md)
 - [Architecture Diagram](architecture-diagram.md) 

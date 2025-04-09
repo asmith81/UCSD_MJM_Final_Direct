@@ -157,6 +157,15 @@ class GroundTruthManager:
         self._logger.debug(f"Validated work order: {value}")
         return str_val
         
+    def get_expected_fields(self) -> set:
+        """Get the set of expected fields for extraction.
+        
+        Returns:
+            Set of field names that should be extracted from invoices.
+        """
+        # Return the key fields that should be extracted from invoices
+        return {"Work Order Number", "Total"}
+        
     def validate_ground_truth(self) -> None:
         """Validate the structure and content of ground truth data.
         

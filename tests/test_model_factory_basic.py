@@ -1,5 +1,5 @@
 """
-Tests for the ModelFactory implementation.
+Basic tests for the ModelFactory implementation.
 """
 import pytest
 from unittest.mock import Mock, patch
@@ -104,7 +104,7 @@ def test_create_model_failures(factory, mock_config):
     mock_config.get_value.return_value = "failing"
     
     # Test initialization failure
-    with pytest.raises(ModelCreationError, match="Failed to create model test_model"):
+    with pytest.raises(ModelInitializationError, match="Failed to initialize model"):
         factory.create_model("test_model", mock_config)
     
     # Test invalid model type
@@ -115,8 +115,8 @@ def test_create_model_failures(factory, mock_config):
     # Test config validation failure
     mock_config.get_value.return_value = "failing"
     # Patch the FailingModel class to fail validation for this test
-    with patch.object(FailingModel, '_validation_test', True, create=True):
-        with pytest.raises(ModelCreationError, match="Invalid configuration"):
+    with patch.object(FailingModel, 'validate_config', return_value=False):
+        with pytest.raises(ModelConfigError, match="Configuration validation failed"):
             factory.create_model("test_model", mock_config)
 
 def test_load_model_config(factory):
@@ -148,7 +148,7 @@ def test_model_factory_integration(factory, mock_config):
     
     # Test failure flow
     mock_config.get_value.return_value = "failing"
-    with pytest.raises(ModelCreationError):
+    with pytest.raises(ModelInitializationError, match="Failed to initialize model"):
         factory.create_model("test_model")
 
 def test_factory_init_without_config_manager():
