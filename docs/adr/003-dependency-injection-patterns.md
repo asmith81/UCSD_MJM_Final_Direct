@@ -2,7 +2,7 @@
 
 ## Status
 
-Proposed
+Accepted and Implemented
 
 ## Context
 
@@ -24,15 +24,43 @@ The existing implementation in Phase 1 components (ConfigLoader, DataLoader, Gro
 
 5. **Clear Separation of Concerns**: Components have well-defined boundaries and responsibilities, facilitated by the DI pattern, aligning with the project's architectural principles.
 
+6. **No Global State**: Successfully eliminated all global state and singletons, particularly in the configuration system, ensuring proper dependency injection throughout.
+
+### Implementation Examples
+
+1. **Configuration System**:
+   ```python
+   # Interface-based design
+   class BaseConfigManager(ABC):
+       @abstractmethod
+       def __init__(self, config_root: str, config_factory: ConfigFactory):
+           pass
+           
+   # Constructor injection
+   class ConfigManager(BaseConfigManager):
+       def __init__(self, config_root: str, config_factory: ConfigFactory):
+           if not config_root:
+               raise ValueError("config_root must be provided")
+           if not config_factory:
+               raise ValueError("config_factory must be provided")
+           self._config_root = config_root
+           self._config_factory = config_factory
+   ```
+
+2. **Type System**:
+   ```python
+   # Separate type definitions
+   class ConfigType(Enum):
+       MODEL = auto()
+       PROMPT = auto()
+       EVALUATION = auto()
+   ```
+
 ### Areas for Improvement
 
-1. **Inconsistent Optional Dependencies**: Some components have optional dependencies or default implementations, which can lead to inconsistencies in how components are wired together.
+1. **Documentation**: The dependency relationships between components are not always well-documented in class docstrings, making it challenging to understand the full component graph.
 
-2. **Manual Dependency Management**: Dependencies are manually wired together without a centralized mechanism, which could become unwieldy as we move into Phase 2 and 3 components.
-
-3. **Component Granularity**: Some classes may have too many injected dependencies, suggesting they might have too many responsibilities.
-
-4. **Documentation**: The dependency relationships between components are not always well-documented in class docstrings, making it challenging to understand the full component graph.
+2. **Component Granularity**: Some classes may have too many injected dependencies, suggesting they might have too many responsibilities.
 
 ## Decision
 
@@ -60,10 +88,10 @@ We will continue using constructor-based dependency injection as our primary DI 
    - Factories should handle dependency creation and wiring
    - Register implementations with factories rather than hardcoding them
 
-4. **Optional Dependencies**:
-   - Minimize optional dependencies when possible
-   - When optional dependencies are needed, document their default behavior clearly
-   - Consider using the Null Object pattern for optional dependencies
+4. **Type System Organization**:
+   - Keep type definitions in separate modules
+   - Avoid circular dependencies through proper module organization
+   - Use enums for type definitions where appropriate
 
 5. **Testing Considerations**:
    - Design components to be testable in isolation
@@ -78,12 +106,13 @@ We will continue using constructor-based dependency injection as our primary DI 
 - Better testability and easier mocking
 - Clearer component boundaries and responsibilities
 - More flexible system evolution through loose coupling
+- Elimination of global state and singletons
+- Proper separation of type definitions
 
 ### Negative
 
 - Slightly increased boilerplate code
 - Need for more documentation to understand component relationships
-- Potential complexity in managing dependency graphs manually
 
 ### Neutral
 

@@ -17,6 +17,7 @@ from src.models.model_errors import (
     ModelResourceError
 )
 from src.config.base_config import BaseConfig
+from src.config.base_config_manager import BaseConfigManager
 from src.config.implementations.model_config import ModelConfig
 
 

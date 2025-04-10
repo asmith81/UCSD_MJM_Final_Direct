@@ -129,7 +129,12 @@ invoice-extraction-comparison/
 │   │   ├── base_model.py        # Base interface ✓
 │   │   ├── model_factory.py     # Factory ✓
 │   │   └── implementations/     # Model implementations (Planned)
-│   ├── prompts/                  # Prompt management (In Progress)
+│   ├── prompts/                  # Prompt management ✓
+│   │   ├── base_prompt_generator.py  # Generator interface ✓
+│   │   ├── prompt_factory.py     # Factory (In Progress)
+│   │   ├── prompt_config.py      # Configuration ✓
+│   │   └── implementations/      # Concrete generators
+│   │       └── basic_prompt_generator.py  # Basic implementation ✓
 │   ├── evaluation/              # Evaluation framework (In Progress)
 │   └── visualization/          # Visualization utilities (In Progress)
 │
@@ -238,42 +243,44 @@ The project uses a robust, interface-based configuration system with dependency 
    - Abstract base class for all configurations
    - Type-safe data access methods
    - Standardized validation
+   - No global state or singletons
 
-2. **Configuration Parser Protocol**:
-   - Flexible parsing strategy
-   - YAML parsing by default
-   - Extensible for other formats
+2. **Configuration Manager**:
+   - Interface-based design with proper DI
+   - Constructor-based dependency injection
+   - Type-safe configuration handling
+   - Proper separation of type definitions
 
 3. **Configuration Factory**:
    - Creates typed configuration objects
    - Implements factory pattern
    - Supports registration of new types
+   - Type-safe configuration creation
 
-4. **Configuration Loader**:
-   - Dependency injection based design
-   - Path-based configuration loading
-   - Comprehensive error handling
+4. **Type System**:
+   - Clear separation of type definitions
+   - Avoids circular dependencies
+   - Enum-based type definitions
+   - Proper module organization
 
 Example usage:
 ```python
 from pathlib import Path
-from src.config import ConfigLoader, ConfigFactory, YAMLConfigParser
+from src.config import ConfigManager, ConfigFactory, ConfigType
 
 # Create dependencies
 factory = ConfigFactory()
-parser = YAMLConfigParser()  # Optional, uses default if not specified
 
 # Initialize with dependency injection
-loader = ConfigLoader(
-    config_path=Path("config/"),
-    config_factory=factory,
-    config_parser=parser  # Optional
+config_manager = ConfigManager(
+    config_root="config/",
+    config_factory=factory
 )
 
 # Load configurations
-model_config = loader.load_model_config("pixtral")
-prompt_config = loader.load_prompt_config("basic")
-eval_config = loader.load_evaluation_config()
+model_config = config_manager.get_config(ConfigType.MODEL, "pixtral")
+prompt_config = config_manager.get_config(ConfigType.PROMPT, "basic")
+eval_config = config_manager.get_config(ConfigType.EVALUATION, "default")
 
 # Access configuration data
 model_name = model_config.get_data()["name"]
@@ -509,6 +516,11 @@ The project uses ADRs to document significant architectural decisions:
    - Decoupling factory from concrete implementations
    - Testing strategy for factories
 
+4. **ADR-007: Prompt Generation System Design**
+   - Flexible prompt generation system with multiple strategies
+   - Base components, template management, and prompt strategies
+   - Comprehensive test coverage
+
 ## Contributing
 
 1. Fork the repository
@@ -526,3 +538,54 @@ The project uses ADRs to document significant architectural decisions:
 - Original dataset providers
 - Model developers and maintainers
 - Open-source community contributors
+
+## Prompt Generation System ✓
+
+The project implements a flexible prompt generation system with multiple strategies:
+
+1. **Base Components**:
+   - `BasePromptGenerator` interface defines standard prompt generation contract ✓
+   - `PromptConfig` manages template configuration and validation ✓
+   - Factory pattern with proper test isolation ✓
+   - Template caching for performance optimization (Planned)
+
+2. **Template Management**:
+   ```python
+   class PromptTemplate:
+       name: str
+       text: str
+       category: str
+       field_to_extract: str
+       description: str
+       version: Optional[str]
+       format_instructions: Optional[str]
+       metadata: Optional[Dict[str, Any]]
+   ```
+
+3. **Prompt Strategies**:
+   - Basic: Direct field extraction prompts ✓
+   - Detailed: Comprehensive instruction prompts (Planned)
+   - Few-Shot: Example-based prompts (Planned)
+   - Step-by-Step: Guided extraction prompts (Planned)
+   - Locational: Spatial-aware prompts (Planned)
+
+4. **Implementation Example**:
+   ```python
+   # Create prompt generator with proper validation
+   generator = prompt_factory.create_generator("basic", "work_order")
+   generator.initialize(prompt_config)
+   
+   # Generate prompt with field-specific validation
+   context = {"field_type": "work_order"}
+   prompt = generator.generate_prompt(context)
+   ```
+
+5. **Key Features**:
+   - Field-specific format validation ✓
+   - Template validation ✓
+   - Robust error handling ✓
+   - Resource cleanup management ✓
+   - Proper test isolation ✓
+   - Comprehensive test coverage (96%) ✓
+
+For detailed design decisions, see ADR-007: Prompt Generation System Design.

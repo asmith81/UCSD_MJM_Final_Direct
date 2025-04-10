@@ -1,0 +1,54 @@
+config_info:
+  name: "Prompt Format Configurations"
+  version: "1.0"
+  description: "Configuration for model-specific prompt formatting"
+
+# Documentation references:
+# - Llama Vision: https://huggingface.co/meta-llama/Llama-3.2-11B-Vision
+# - Pixtral: https://huggingface.co/mistral-community/pixtral-12b
+# - Doctr: https://github.com/mindee/doctr
+
+default_format: "basic"
+
+validation:
+  max_tokens: 2048
+  min_prompt_length: 10
+  max_prompt_length: 4096
+
+formats:
+  basic:
+    validation:
+      required_sections: ["prompt"]
+      max_tokens: 1024
+    max_length: 2048
+    format_template: "{prompt}"
+
+  pixtral:
+    validation:
+      required_sections: ["system", "prompt"]
+      max_tokens: 2048
+    max_length: 4096
+    format_template: "{system}\n\nUser: {prompt}\nAssistant:"
+    system_message: "You are a helpful assistant that extracts information from invoice images."
+    version: "pixtral-12b"  # Based on Mistral architecture
+    reference: "https://huggingface.co/mistral-community/pixtral-12b"
+
+  llama:
+    validation:
+      required_sections: ["system", "prompt"]
+      max_tokens: 2048
+    max_length: 4096
+    format_template: "<s>[INST] <<SYS>>\n{system}\n<</SYS>>\n\n{prompt}[/INST]"
+    system_message: "You are a helpful assistant that extracts information from invoice images."
+    version: "llama-3.2-11b-vision"
+    reference: "https://huggingface.co/meta-llama/Llama-3.2-11B-Vision"
+
+  doctr:
+    validation:
+      required_sections: ["prompt"]
+      max_tokens: 1024
+    max_length: 2048
+    format_template: "{prompt}"
+    version: "doctr-2.4.0"
+    reference: "https://github.com/mindee/doctr"
+    notes: "Doctr is primarily an OCR model and uses simple prompt format" 

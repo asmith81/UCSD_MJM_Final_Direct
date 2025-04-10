@@ -589,7 +589,7 @@ model:
 3. Invalid values: Raise ValueError with valid range
 4. Resource errors: Raise ModelInitializationError
 
-## 4. Prompt System (In Progress)
+## 4. Prompt System
 
 ### 4.1 Base Prompt Generator Interface
 ```python
@@ -610,6 +610,153 @@ class BasePromptGenerator(ABC):
         """Generate a prompt from context."""
         pass
 ```
+
+### 4.2 Prompt Factory System
+
+#### 4.2.1 Factory Interface
+```python
+from typing import Dict, Type, Optional
+from pathlib import Path
+
+class PromptFactory:
+    """Factory for creating prompt generators."""
+    
+    REGISTRY: Dict[str, Type[BasePromptGenerator]] = {}
+    VALID_CATEGORIES = {'basic', 'detailed', 'positioned', 'few_shot', 'step_by_step', 'template'}
+    VALID_FIELD_TYPES = {'work_order', 'cost'}
+    
+    def __init__(self, config_dir: Path):
+        """Initialize with configuration directory."""
+        pass
+        
+    def create_generator(
+        self,
+        category: str,
+        field_type: str,
+        config: Optional[BaseConfig] = None
+    ) -> BasePromptGenerator:
+        """Create a prompt generator instance."""
+        pass
+        
+    @classmethod
+    def register_generator(
+        cls,
+        category: str,
+        generator_class: Type[BasePromptGenerator]
+    ) -> None:
+        """Register a new prompt generator implementation."""
+        pass
+```
+
+#### 4.2.2 Field Type Requirements
+```python
+FIELD_REQUIREMENTS = {
+    'work_order': {
+        'type': str,
+        'validation': lambda x: bool(re.match(r'^\d{5}$', x)),
+        'format_description': "5-digit number with preserved leading zeros"
+    },
+    'cost': {
+        'type': Decimal,
+        'validation': lambda x: float(x) > 0 and len(str(float(x)).split('.')[1]) <= 2,
+        'format_description': "Positive number with up to 2 decimal places"
+    }
+}
+```
+
+#### 4.2.3 Configuration Structure
+```yaml
+# Example prompt configuration (basic.yaml)
+config_info:
+  name: "Basic Prompts"
+  version: "1.0"
+prompts:
+  - name: "work_order_basic"
+    text: "Extract the work order number"
+    category: "basic"
+    field_to_extract: "work_order"
+    format_instructions: "5-digit number with preserved leading zeros"
+  - name: "cost_basic"
+    text: "Extract the total cost"
+    category: "basic"
+    field_to_extract: "cost"
+    format_instructions: "Positive number with up to 2 decimal places"
+    metadata:
+      examples:
+        - input: "Total: $123.45"
+          output: "123.45"
+```
+
+#### 4.2.4 Error Types
+```python
+class PromptFactoryError(Exception):
+    """Base exception for prompt factory errors."""
+    pass
+
+class PromptConfigError(PromptFactoryError):
+    """Raised when prompt configuration is invalid."""
+    pass
+
+class PromptGeneratorError(PromptFactoryError):
+    """Raised when generator creation or initialization fails."""
+    pass
+```
+
+#### 4.2.5 Usage Example
+```python
+# Create factory instance
+factory = PromptFactory(Path("config"))
+
+# Register custom generator
+factory.register_generator('custom', CustomPromptGenerator)
+
+# Create generator instance
+generator = factory.create_generator(
+    category='basic',
+    field_type='work_order'
+)
+
+# Generate prompt
+prompt = generator.generate_prompt({
+    'field_type': 'work_order',
+    'format_instructions': 'Must be exactly 5 digits'
+})
+
+# Clean up resources
+factory.cleanup()
+```
+
+#### 4.2.6 Implementation Requirements
+
+1. **Configuration Management**
+   - YAML-based configuration files
+   - Field-specific format requirements
+   - Example validation
+   - Version tracking
+
+2. **Generator Lifecycle**
+   - Proper initialization
+   - Resource cleanup
+   - Error handling
+   - State management
+
+3. **Validation Rules**
+   - Field type validation
+   - Format instruction validation
+   - Example validation
+   - Configuration structure validation
+
+4. **Error Handling**
+   - Specific error types
+   - Clear error messages
+   - Resource cleanup on error
+   - Safe error propagation
+
+5. **Testing Requirements**
+   - Unit tests for all components
+   - Configuration validation tests
+   - Error handling tests
+   - Resource cleanup tests
 
 ## 5. Evaluation System (In Progress)
 

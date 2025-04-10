@@ -304,7 +304,8 @@ class ModelTimeoutError(ModelProcessingError):
             context["timeout_seconds"] = timeout_seconds
             
         timeout_info = f" after {timeout_seconds:.1f}s" if timeout_seconds else ""
-        super().__init__(f"Operation timed out{timeout_info}: {message}", model_name, image_path, "processing", context)
+        error_message = f"Timeout{timeout_info}: {message}"
+        super().__init__(error_message, model_name, image_path, "inference", context)
 
 
 class ModelLoaderTimeoutError(ModelInitializationError):

@@ -1,0 +1,37 @@
+# Default prompt format configurations for different model types
+
+version: "1.0"
+description: "Default prompt format configurations"
+
+formats:
+  pixtral:
+    max_length: 2048
+    format_template: "{system}\n\nUser: {prompt}\nAssistant:"
+    system_message: "You are an AI assistant analyzing invoice images."
+    validation:
+      required_sections: ["system", "prompt"]
+      max_tokens: 2048
+      
+  llama_vision:
+    max_length: 4096
+    format_template: "<|system|>{system}<|user|>{prompt}<|assistant|>"
+    system_message: "Analyze the invoice image and extract information."
+    validation:
+      required_sections: ["system", "prompt"]
+      max_tokens: 4096
+      
+  doctr:
+    max_length: 1024
+    format_template: "{prompt}"  # Simple format, no system message
+    validation:
+      required_sections: ["prompt"]
+      max_tokens: 1024
+
+# Default format to use if model type not specified
+default_format: "pixtral"
+
+# Global validation rules
+validation:
+  min_prompt_length: 10
+  max_prompt_length: 8192
+  required_fields: ["format_template", "validation"] 

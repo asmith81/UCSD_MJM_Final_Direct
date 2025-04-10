@@ -21,7 +21,8 @@ from .model_errors import (
 )
 from .retry_utils import RetryConfig, with_retry
 from ..config.base_config import BaseConfig
-from ..config import get_config_manager, ConfigType
+from ..config.base_config_manager import BaseConfigManager
+from ..config.config_types import ConfigType
 from ..config.implementations.model_config import ModelConfig
 
 # Set up logger for this module
@@ -32,30 +33,55 @@ class ModelFactory:
     Factory for creating model instances based on configuration.
     Uses dependency injection and configuration management.
     
+    This factory follows the dependency injection pattern and requires explicit
+    dependencies to be provided through the constructor. It manages model lifecycle,
+    configuration validation, error recovery, and resource management.
+    
+    Dependencies:
+        - config_manager: Required. Manages model configurations.
+        - RetryConfig: Optional. Configures retry behavior for model operations.
+        - ErrorRecoveryManager: Created internally for error handling.
+        - ModelResourceManager: Created internally for resource management.
+    
     Example:
         # Register a model implementation
         ModelFactory.register_model("custom_model", CustomModel)
         
         # Create a factory instance with configuration manager
-        config_manager = get_config_manager()
+        config_manager = ConfigManager()  # Create your config manager instance
         factory = ModelFactory(config_manager)
         
         # Create a model instance
         model = factory.create_model("model_name")
+        
+    Note:
+        The factory maintains a registry of model implementations that must be
+        registered before use. Each model implementation must inherit from BaseModel
+        and follow the dependency injection pattern.
     """
 
     # Registry of available model implementations
     MODEL_REGISTRY: Dict[str, Type[BaseModel]] = {}
 
-    def __init__(self, config_manager):
+    def __init__(self, config_manager: BaseConfigManager):
         """
         Initialize the factory with required dependencies.
 
+        The factory requires a configuration manager for loading and validating
+        model configurations. It also sets up retry behavior with default settings
+        that can be customized through the RetryConfig.
+
         Args:
-            config_manager: Configuration manager instance.
+            config_manager: Configuration manager instance that provides access to
+                          model configurations. Must not be None.
         
         Raises:
-            ValueError: If config_manager is None
+            ValueError: If config_manager is None, as it is a required dependency.
+            
+        Dependencies Created:
+            - RetryConfig: Configured with default settings for model operations
+            - ErrorRecoveryManager: Created per model instance for error handling
+            - ModelResourceManager: Created per model instance for resource management
         """
         if config_manager is None:
             raise ValueError("config_manager is required")
@@ -251,13 +277,17 @@ class ModelFactory:
             model_class: Model class implementing BaseModel
             
         Raises:
-            ValueError: If model_type is already registered
+            ValueError: If model_type is empty/None or already registered
+            ValueError: If model_class doesn't implement BaseModel interface
         """
+        if not model_type or not isinstance(model_type, str):
+            raise ValueError("Model type must be a non-empty string")
+            
         if model_type in cls.MODEL_REGISTRY:
             raise ValueError(f"Model type '{model_type}' is already registered")
             
         if not issubclass(model_class, BaseModel):
-            raise ValueError(f"Model class must implement BaseModel interface")
+            raise ValueError("Model class must implement BaseModel interface")
             
         cls.MODEL_REGISTRY[model_type] = model_class
         logger.debug(f"Registered model implementation: {model_type} -> {model_class.__name__}")
