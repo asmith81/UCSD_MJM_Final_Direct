@@ -8,8 +8,7 @@ from typing import Dict, Type, Optional, Any
 
 from .base_output_parser import BaseOutputParser, OutputParserError
 from ..config.base_config import BaseConfig
-from ..config.base_config_manager import BaseConfigManager
-from ..config.config_types import ConfigType
+from ..config import get_config_manager, ConfigType
 
 class OutputParserCreationError(Exception):
     """Raised when output parser creation fails."""
@@ -25,7 +24,7 @@ class OutputParserFactory:
         OutputParserFactory.register_parser("json_parser", JsonOutputParser)
         
         # Create a factory instance with config manager
-        config_manager = ConfigManager()  # Create your config manager instance
+        config_manager = get_config_manager()
         factory = OutputParserFactory(config_manager)
         
         # Create a parser instance
@@ -35,7 +34,7 @@ class OutputParserFactory:
     # Registry of available parser implementations
     PARSER_REGISTRY: Dict[str, Type[BaseOutputParser]] = {}
     
-    def __init__(self, config_manager: BaseConfigManager):
+    def __init__(self, config_manager):
         """
         Initialize the factory with required dependencies.
         

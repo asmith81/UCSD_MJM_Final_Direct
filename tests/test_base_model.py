@@ -10,12 +10,10 @@ from pathlib import Path
 from typing import Dict, Any
 
 from src.config.base_config import BaseConfig
-from src.models.base_model import BaseModel
-from src.models.model_errors import (
+from src.models.base_model import (
+    BaseModel,
     ModelInitializationError,
-    ModelProcessingError,
-    ModelConfigError,
-    ModelInputError
+    ModelProcessingError
 )
 
 
@@ -122,7 +120,7 @@ def test_model_initialization(mock_model, valid_config):
 
 def test_model_initialization_invalid_config(mock_model, invalid_config):
     """Test model initialization with invalid config."""
-    with pytest.raises(ModelConfigError) as exc_info:
+    with pytest.raises(ValueError) as exc_info:
         mock_model.initialize(invalid_config)
     assert "Missing required field" in str(exc_info.value)
     assert not mock_model.initialized

@@ -4,7 +4,7 @@ Model Error Hierarchy.
 This module defines a comprehensive hierarchy of exceptions for model-related errors.
 Each exception type provides detailed context and appropriate error messaging.
 """
-from typing import Any, Optional, Dict
+from typing import Any, Optional, Dict, List
 
 
 class ModelError(Exception):
@@ -66,57 +66,68 @@ class ModelInitializationError(ModelError):
         super().__init__(f"Initialization failed{component_info}: {message}", model_name, context)
 
 
-class ModelConfigError(ModelError):
-    """
-    Raised when model configuration is invalid.
-    
-    This exception indicates issues with:
-    - Missing required configuration
-    - Invalid parameter values
-    - Incompatible configuration settings
-    """
-    
+class ModelConfigError(Exception):
+    """Exception raised for model configuration errors."""
+
     def __init__(
-        self, 
-        message: str, 
-        model_name: Optional[str] = None,
+        self,
+        message: str,
         parameter: Optional[str] = None,
-        value: Any = None,
-        expected: Any = None,
-        context: Optional[Dict[str, Any]] = None
+        value: Optional[Any] = None,
+        expected: Optional[str] = None,
+        model_name: Optional[str] = None,
+        parent_error: Optional[Exception] = None,
+        errors: Optional[List[str]] = None
     ):
-        """
-        Initialize with configuration error details.
-        
+        """Initialize ModelConfigError.
+
         Args:
-            message: Error message describing the configuration issue
-            model_name: Optional name of the model
-            parameter: Optional name of the invalid parameter
-            value: Optional invalid value provided
-            expected: Optional description of expected value
-            context: Optional dictionary with additional error context
+            message: The error message
+            parameter: The parameter that caused the error
+            value: The invalid value
+            expected: Description of expected value
+            model_name: Name of the model being configured
+            parent_error: Parent exception if this wraps another error
+            errors: List of additional error messages
         """
-        self.parameter = parameter
-        self.value = value
-        self.expected = expected
+        message_parts = []
         
-        context = context or {}
-        if parameter:
-            context["parameter"] = parameter
-        if value is not None:
-            context["value"] = value
-        if expected is not None:
-            context["expected"] = expected
+        # Add base message
+        message_parts.append(message.rstrip("."))
         
-        if parameter:
-            if value is not None and expected is not None:
-                message = f"Invalid configuration parameter '{parameter}': {message}. Got '{value}', expected {expected}"
-            elif value is not None:
-                message = f"Invalid configuration parameter '{parameter}': {message}. Got '{value}'"
+        # Add parameter and value context if provided
+        if parameter is not None:
+            if value is not None:
+                message_parts.append(f"Got {value!r} for {parameter}")
             else:
-                message = f"Invalid configuration parameter '{parameter}': {message}"
-                
-        super().__init__(message, model_name, context)
+                message_parts.append(f"Parameter: {parameter}")
+        elif value is not None:
+            message_parts.append(f"Got: {value!r}")
+            
+        # Add expected value if provided
+        if expected is not None:
+            message_parts.append(f"Expected: {expected}")
+            
+        # Add model name context if provided
+        if model_name:
+            message_parts.append(f"Model: {model_name}")
+            
+        # Add parent error if provided
+        if parent_error:
+            message_parts.append(f"Caused by: {str(parent_error)}")
+            
+        # Add additional errors if provided
+        if errors:
+            message_parts.extend(errors)
+            
+        # Join all parts with periods
+        final_message = ". ".join(message_parts)
+        
+        # Ensure message ends with period
+        if not final_message.endswith("."):
+            final_message += "."
+            
+        super().__init__(final_message)
 
 
 class ModelResourceError(ModelError):
@@ -304,8 +315,9 @@ class ModelTimeoutError(ModelProcessingError):
             context["timeout_seconds"] = timeout_seconds
             
         timeout_info = f" after {timeout_seconds:.1f}s" if timeout_seconds else ""
-        error_message = f"Timeout{timeout_info}: {message}"
-        super().__init__(error_message, model_name, image_path, "inference", context)
+        message = f"Timeout{timeout_info}: {message}"
+        
+        super().__init__(message, model_name, image_path, "inference", context)
 
 
 class ModelLoaderTimeoutError(ModelInitializationError):

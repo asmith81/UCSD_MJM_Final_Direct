@@ -265,4 +265,171 @@ class TestModelErrors:
         assert "image 'test.jpg'" in str(error)
         assert "during inference" in str(error)
         assert "Timeout after 30.5s" in str(error)
-        assert "Processing timed out" in str(error) 
+        assert "Processing timed out" in str(error)
+    
+    def test_model_config_error_chaining(self):
+        """Test chaining of configuration errors."""
+        # Create a chain of errors
+        root_error = ModelConfigError(
+            "Primary validation failed",
+            parameter="config",
+            model_name="test_model"
+        )
+        
+        nested_error = ModelConfigError(
+            "Nested validation failed",
+            parameter="nested.field",
+            value="invalid",
+            expected="valid",
+            model_name="test_model",
+            parent_error=root_error
+        )
+        
+        leaf_error = ModelConfigError(
+            "Leaf validation failed",
+            parameter="nested.field.subfield",
+            value=123,
+            expected="string",
+            model_name="test_model",
+            parent_error=nested_error
+        )
+        
+        # Verify error chain
+        error_str = str(leaf_error)
+        assert "Primary validation failed" in error_str
+        assert "Nested validation failed" in error_str
+        assert "Leaf validation failed" in error_str
+        assert "nested.field.subfield" in error_str
+        assert "expected string" in error_str
+        assert "got 123" in error_str
+    
+    def test_model_config_error_with_context(self):
+        """Test configuration errors with additional context."""
+        # Test with file location context
+        error = ModelConfigError(
+            "Invalid configuration",
+            parameter="model.type",
+            value="unknown",
+            expected="one of [llm, vision, multimodal]",
+            model_name="test_model",
+            context={
+                "file": "config/models/test_model.yaml",
+                "line": 42,
+                "column": 10
+            }
+        )
+        
+        error_str = str(error)
+        assert "config/models/test_model.yaml" in error_str
+        assert "line 42" in error_str
+        assert "column 10" in error_str
+        
+        # Test with validation context
+        error = ModelConfigError(
+            "Validation failed",
+            parameter="model.parameters.batch_size",
+            value=-1,
+            expected="positive integer",
+            model_name="test_model",
+            context={
+                "validator": "BatchSizeValidator",
+                "phase": "initialization",
+                "additional_info": "Batch size must be positive for memory management"
+            }
+        )
+        
+        error_str = str(error)
+        assert "BatchSizeValidator" in error_str
+        assert "initialization phase" in error_str
+        assert "memory management" in error_str
+    
+    def test_model_config_error_formatting_options(self):
+        """Test different formatting options for configuration errors."""
+        # Test basic formatting
+        error = ModelConfigError(
+            "Basic error",
+            parameter="param",
+            model_name="model"
+        )
+        assert str(error) == "[model] Invalid configuration parameter 'param': Basic error"
+        
+        # Test with value
+        error = ModelConfigError(
+            "Invalid value",
+            parameter="param",
+            value=123,
+            model_name="model"
+        )
+        assert "Got '123'" in str(error)
+        
+        # Test with expected
+        error = ModelConfigError(
+            "Wrong type",
+            parameter="param",
+            value="123",
+            expected="integer",
+            model_name="model"
+        )
+        assert "expected integer" in str(error)
+        
+        # Test with nested parameter
+        error = ModelConfigError(
+            "Nested error",
+            parameter="parent.child.field",
+            value=None,
+            expected="non-null",
+            model_name="model"
+        )
+        assert "parameter 'parent.child.field'" in str(error)
+        
+        # Test with multiple expected values
+        error = ModelConfigError(
+            "Invalid option",
+            parameter="mode",
+            value="invalid",
+            expected=["train", "test", "eval"],
+            model_name="model"
+        )
+        assert "expected one of: train, test, eval" in str(error)
+    
+    def test_model_config_error_aggregation(self):
+        """Test aggregation of multiple configuration errors."""
+        errors = [
+            ModelConfigError(
+                "First error",
+                parameter="param1",
+                value=1,
+                expected=">= 10",
+                model_name="model"
+            ),
+            ModelConfigError(
+                "Second error",
+                parameter="param2",
+                value="invalid",
+                expected="valid string",
+                model_name="model"
+            ),
+            ModelConfigError(
+                "Third error",
+                parameter="param3",
+                value=None,
+                expected="non-null",
+                model_name="model"
+            )
+        ]
+        
+        # Create aggregated error
+        aggregated = ModelConfigError(
+            "Multiple configuration errors",
+            model_name="model",
+            context={"errors": errors}
+        )
+        
+        error_str = str(aggregated)
+        assert "Multiple configuration errors" in error_str
+        assert "First error" in error_str
+        assert "Second error" in error_str
+        assert "Third error" in error_str
+        assert "param1" in error_str
+        assert "param2" in error_str
+        assert "param3" in error_str 

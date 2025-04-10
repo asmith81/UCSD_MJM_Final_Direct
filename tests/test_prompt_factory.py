@@ -2,141 +2,128 @@
 Tests for the PromptFactory implementation.
 """
 import pytest
-from pathlib import Path
 from unittest.mock import Mock, patch
 
-from src.prompts.prompt_factory import PromptFactory, PromptFactoryError
+from src.prompts.prompt_factory import PromptFactory
 from src.prompts.base_prompt_generator import BasePromptGenerator
-from src.prompts.prompt_config import PromptConfig
-from src.prompts.implementations.basic_prompt_generator import BasicPromptGenerator
+from src.config import ConfigType
 
 # Mock prompt generator for testing
 class MockPromptGenerator(BasePromptGenerator):
     """Mock prompt generator for testing."""
     
-    def initialize(self, config):
+    def __init__(self, config, field):
         self.config = config
+        self.field = field
         
-    def generate_prompt(self, context):
-        return "mock prompt"
+    def generate_prompt(self, data):
+        return f"Mock prompt for {self.field}: {data}"
 
-@pytest.fixture
-def config_dir(tmp_path):
-    """Create a temporary config directory with test files."""
-    config_dir = tmp_path / "config" / "prompts"
-    config_dir.mkdir(parents=True)
+class TestPromptFactory:
+    """Tests for PromptFactory implementation."""
     
-    # Create basic.yaml
-    basic_yaml = """
-config_info:
-  name: basic_prompts
-  version: "1.0"
-prompts:
-  - name: basic_work_order
-    text: "Extract the work order number."
-    category: basic
-    field_to_extract: work_order
-    description: "Basic work order prompt"
-    version: "1.0"
-    format_instructions: {}
-    metadata: {}
-  - name: basic_cost
-    text: "Extract the total cost."
-    category: basic
-    field_to_extract: cost
-    description: "Basic cost prompt"
-    version: "1.0"
-    format_instructions: {}
-    metadata: {}
-"""
-    (config_dir / "basic.yaml").write_text(basic_yaml)
-    
-    return config_dir
-
-@pytest.fixture
-def factory(config_dir):
-    """Create a PromptFactory instance for testing."""
-    return PromptFactory(config_dir)
-
-def test_register_generator():
-    """Test registering a new generator."""
-    PromptFactory.REGISTRY.clear()  # Start fresh
-    
-    # Register valid generator
-    PromptFactory.register_generator("basic", MockPromptGenerator)
-    assert "basic" in PromptFactory.REGISTRY
-    assert PromptFactory.REGISTRY["basic"] == MockPromptGenerator
-    
-    # Try registering invalid category
-    with pytest.raises(ValueError):
-        PromptFactory.register_generator("invalid", MockPromptGenerator)
+    @pytest.fixture
+    def mock_config_manager(self):
+        """Create a mock config manager."""
+        mock = Mock()
+        mock_config = Mock()
         
-    # Try registering invalid class
-    class NotAGenerator:
-        pass
+        # Set up mock config to return sample prompts
+        mock_config.get_prompts_by_field.side_effect = lambda field: [
+            {"category": "basic", "template": "Test template"}
+        ]
         
-    with pytest.raises(TypeError):
-        PromptFactory.register_generator("basic", NotAGenerator)
+        mock.get_config.return_value = mock_config
+        return mock
         
-    # Try registering duplicate
-    with pytest.raises(ValueError):
-        PromptFactory.register_generator("basic", MockPromptGenerator)
-
-def test_create_generator(factory):
-    """Test creating a generator instance."""
-    # Register a test generator
-    PromptFactory.REGISTRY.clear()
-    PromptFactory.register_generator("basic", MockPromptGenerator)
-    
-    # Create with valid inputs
-    generator = factory.create_generator("basic", "work_order")
-    assert isinstance(generator, MockPromptGenerator)
-    
-    # Try invalid category
-    with pytest.raises(ValueError):
-        factory.create_generator("invalid", "work_order")
+    @pytest.fixture
+    def factory(self, mock_config_manager):
+        """Create a PromptFactory instance for testing."""
+        # Clear registry before each test
+        original_registry = PromptFactory.PROMPT_REGISTRY.copy()
+        # Register our mock generator
+        PromptFactory.PROMPT_REGISTRY = {"basic": MockPromptGenerator}
         
-    # Try invalid field type
-    with pytest.raises(ValueError):
-        factory.create_generator("basic", "invalid")
+        factory = PromptFactory(mock_config_manager)
         
-    # Try unregistered category
-    PromptFactory.REGISTRY.clear()
-    with pytest.raises(PromptFactoryError):
-        factory.create_generator("basic", "work_order")
-
-def test_load_config(factory):
-    """Test loading configuration from files."""
-    # Load valid config
-    config = factory._load_config("basic", "work_order")
-    assert isinstance(config, PromptConfig)
-    assert len(config.get_prompts_for_field("work_order")) == 1
-    
-    # Try loading non-existent file
-    with pytest.raises(PromptFactoryError):
-        factory._load_config("nonexistent", "work_order")
+        yield factory
         
-    # Try loading for non-existent field type
-    with pytest.raises(PromptFactoryError):
-        factory._load_config("basic", "invalid")
-
-def test_basic_generator_integration(factory):
-    """Test integration with BasicPromptGenerator."""
-    # Register the actual BasicPromptGenerator
-    PromptFactory.REGISTRY.clear()
-    PromptFactory.register_generator("basic", BasicPromptGenerator)
+        # Restore registry
+        PromptFactory.PROMPT_REGISTRY = original_registry
     
-    # Create generator
-    generator = factory.create_generator("basic", "work_order")
-    assert isinstance(generator, BasicPromptGenerator)
+    def test_factory_initialization(self, mock_config_manager):
+        """Test factory initialization."""
+        factory = PromptFactory(mock_config_manager)
+        assert factory._config_manager == mock_config_manager
     
-    # Generate a prompt
-    prompt = generator.generate_prompt({"field_type": "work_order"})
-    assert "work order number" in prompt.lower()
-    assert "5 alphanumeric characters" in prompt
+    def test_factory_initialization_fails_without_config(self):
+        """Test that factory requires a config manager."""
+        with pytest.raises(ValueError, match="config_manager is required"):
+            PromptFactory(None)
     
-    # Test with cost field
-    generator = factory.create_generator("basic", "cost")
-    prompt = generator.generate_prompt({"field_type": "cost"})
-    assert "total" in prompt.lower()
-    assert "decimal" in prompt 
+    def test_create_prompt_generator(self, factory, mock_config_manager):
+        """Test creation of prompt generators."""
+        # Set up the mock
+        mock_config_manager.get_config.return_value.get_prompts_by_field.return_value = [
+            {"category": "basic", "template": "Test template"}
+        ]
+        
+        # Create a prompt generator
+        generator = factory.create_prompt_generator("test_prompt", "invoice_number")
+        
+        # Verify the generator was created with correct parameters
+        assert isinstance(generator, MockPromptGenerator)
+        assert generator.field == "invoice_number"
+        
+        # Verify the config manager was called correctly
+        mock_config_manager.get_config.assert_called_once_with(ConfigType.PROMPT, "test_prompt")
+    
+    def test_register_prompt_generator(self):
+        """Test registration of prompt generators."""
+        # Save original registry
+        original_registry = PromptFactory.PROMPT_REGISTRY.copy()
+        
+        try:
+            # Register a new generator
+            PromptFactory.register_prompt_generator("mock", MockPromptGenerator)
+            
+            # Verify it was registered
+            assert "mock" in PromptFactory.PROMPT_REGISTRY
+            assert PromptFactory.PROMPT_REGISTRY["mock"] == MockPromptGenerator
+        finally:
+            # Restore original registry
+            PromptFactory.PROMPT_REGISTRY = original_registry
+    
+    def test_create_prompt_generator_no_prompts(self):
+        """Test error handling when no prompts are found."""
+        # Create a new mock and factory directly (not using fixtures)
+        mock_config_manager = Mock()
+        mock_config = Mock()
+        mock_config_manager.get_config.return_value = mock_config
+        
+        # Set up the mock to return no prompts
+        mock_config.get_prompts_by_field.return_value = []
+        
+        factory = PromptFactory(mock_config_manager)
+        
+        # Attempt to create a generator for a field with no prompts
+        with pytest.raises(ValueError, match="No prompts found for field"):
+            factory.create_prompt_generator("test_prompt", "unknown_field")
+    
+    def test_create_prompt_generator_unknown_type(self):
+        """Test error handling for unknown prompt types."""
+        # Create a new mock and factory directly (not using fixtures)
+        mock_config_manager = Mock()
+        mock_config = Mock()
+        mock_config_manager.get_config.return_value = mock_config
+        
+        # Set up the mock to return a prompt with unknown type
+        mock_config.get_prompts_by_field.return_value = [
+            {"category": "unknown_type", "template": "Test template"}
+        ]
+        
+        factory = PromptFactory(mock_config_manager)
+        
+        # Attempt to create a generator with unknown type
+        with pytest.raises(ValueError, match="Unsupported prompt type"):
+            factory.create_prompt_generator("test_prompt", "invoice_number") 

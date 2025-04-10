@@ -17,7 +17,6 @@ from src.models.model_errors import (
     ModelResourceError
 )
 from src.config.base_config import BaseConfig
-from src.config.base_config_manager import BaseConfigManager
 from src.config.implementations.model_config import ModelConfig
 
 
@@ -317,4 +316,154 @@ class TestModelFactory:
             factory.create_model("test_model")
             
         assert "Failed to instantiate model class" in str(excinfo.value)
-        assert "Unexpected initialization error" in str(excinfo.value) 
+        assert "Unexpected initialization error" in str(excinfo.value)
+
+    def test_edge_case_config_validation(self, clean_registry, config_manager):
+        """Test edge cases in configuration validation."""
+        # Register test model
+        ModelFactory.register_model("mock_model", MockModel)
+        factory = ModelFactory(config_manager)
+        
+        # Test empty string values
+        mock_config = MagicMock(spec=ModelConfig)
+        mock_config.get_value.side_effect = lambda key, default=None: {
+            "name": "",
+            "type": "mock_model",
+            "parameters": {}
+        }.get(key, default)
+        mock_config.validate.return_value = True
+        config_manager.get_config.return_value = mock_config
+        
+        with pytest.raises(ModelConfigError) as excinfo:
+            factory.create_model("test_model")
+        assert "Model name cannot be empty" in str(excinfo.value)
+        
+        # Test whitespace-only values
+        mock_config.get_value.side_effect = lambda key, default=None: {
+            "name": "   ",
+            "type": "mock_model",
+            "parameters": {}
+        }.get(key, default)
+        
+        with pytest.raises(ModelConfigError) as excinfo:
+            factory.create_model("test_model")
+        assert "Model name cannot be empty" in str(excinfo.value)
+        
+        # Test None values
+        mock_config.get_value.side_effect = lambda key, default=None: {
+            "name": None,
+            "type": "mock_model",
+            "parameters": {}
+        }.get(key, default)
+        
+        with pytest.raises(ModelConfigError) as excinfo:
+            factory.create_model("test_model")
+        assert "Model name must be specified" in str(excinfo.value)
+        
+        # Test invalid parameter types
+        mock_config.get_value.side_effect = lambda key, default=None: {
+            "name": "test_model",
+            "type": "mock_model",
+            "parameters": "not a dict"
+        }.get(key, default)
+        
+        with pytest.raises(ModelConfigError) as excinfo:
+            factory.create_model("test_model")
+        assert "Parameters must be a dictionary" in str(excinfo.value)
+        
+        # Test missing required nested fields
+        mock_config.get_value.side_effect = lambda key, default=None: {
+            "name": "test_model",
+            "type": "mock_model",
+            "parameters": {
+                "nested": {}
+            }
+        }.get(key, default)
+        
+        with pytest.raises(ModelConfigError) as excinfo:
+            factory.create_model("test_model")
+        assert "Missing required nested field" in str(excinfo.value)
+        
+        # Test invalid numeric ranges
+        mock_config.get_value.side_effect = lambda key, default=None: {
+            "name": "test_model",
+            "type": "mock_model",
+            "parameters": {
+                "timeout": -1,
+                "batch_size": 0
+            }
+        }.get(key, default)
+        
+        with pytest.raises(ModelConfigError) as excinfo:
+            factory.create_model("test_model")
+        assert "Timeout must be positive" in str(excinfo.value)
+        
+        # Test array validation
+        mock_config.get_value.side_effect = lambda key, default=None: {
+            "name": "test_model",
+            "type": "mock_model",
+            "parameters": {
+                "array_param": ["not", "all", "integers"]
+            }
+        }.get(key, default)
+        
+        with pytest.raises(ModelConfigError) as excinfo:
+            factory.create_model("test_model")
+        assert "Array elements must be integers" in str(excinfo.value)
+
+    def test_config_validation_error_details(self, clean_registry, config_manager):
+        """Test that configuration validation errors include detailed information."""
+        ModelFactory.register_model("mock_model", MockModel)
+        factory = ModelFactory(config_manager)
+        
+        # Test error with parameter name
+        mock_config = MagicMock(spec=ModelConfig)
+        mock_config.get_value.side_effect = lambda key, default=None: {
+            "name": "test_model",
+            "type": "mock_model",
+            "parameters": {
+                "batch_size": "not an integer"
+            }
+        }.get(key, default)
+        mock_config.validate.return_value = True
+        config_manager.get_config.return_value = mock_config
+        
+        with pytest.raises(ModelConfigError) as excinfo:
+            factory.create_model("test_model")
+        error = str(excinfo.value)
+        assert "parameter 'batch_size'" in error
+        assert "expected type: integer" in error
+        assert "got type: str" in error
+        
+        # Test error with value range
+        mock_config.get_value.side_effect = lambda key, default=None: {
+            "name": "test_model",
+            "type": "mock_model",
+            "parameters": {
+                "confidence_threshold": 1.5
+            }
+        }.get(key, default)
+        
+        with pytest.raises(ModelConfigError) as excinfo:
+            factory.create_model("test_model")
+        error = str(excinfo.value)
+        assert "parameter 'confidence_threshold'" in error
+        assert "must be between 0 and 1" in error
+        assert "got value: 1.5" in error
+        
+        # Test error with multiple issues
+        mock_config.get_value.side_effect = lambda key, default=None: {
+            "name": "test_model",
+            "type": "mock_model",
+            "parameters": {
+                "batch_size": -1,
+                "confidence_threshold": 2.0
+            }
+        }.get(key, default)
+        
+        with pytest.raises(ModelConfigError) as excinfo:
+            factory.create_model("test_model")
+        error = str(excinfo.value)
+        assert "Multiple configuration errors" in error
+        assert "batch_size must be positive" in error
+        assert "confidence_threshold must be between 0 and 1" in error 

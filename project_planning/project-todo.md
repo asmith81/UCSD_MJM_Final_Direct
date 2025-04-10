@@ -1,8 +1,8 @@
 # Project To-Do: LMM Invoice Data Extraction Comparison
 
-This to-do list is organized to prioritize local development work before moving to cloud-dependent tasks. Each task is designed to be a focused prompt for an LLM to implement.
+This to-do list is organized in sequential implementation order by phases and sub-phases. Each task is designed to be a focused prompt for an LLM to implement. Complete each phase before moving to the next.
 
-## Phase 1: Project Setup and Foundation ✓
+## Phase 1: Project Setup and Foundation
 
 ### 1.A: Project Structure and Configuration ✓
 - [x] 1.1 Initialize project repository with directory structure
@@ -28,7 +28,7 @@ Section completed with all requirements satisfied and following architectural pr
 - Comprehensive testing
 - Clear separation of concerns
 
-### 1.B: Data Management ✓
+### 1.B: Data Management
 - [x] 1.7 Implement DataLoader class to load images and ground truth CSV
       - Implemented with interface-based design (BaseDataLoader)
       - Added comprehensive test suite (94% coverage)
@@ -49,6 +49,7 @@ Section completed with all requirements satisfied and following architectural pr
       - Implemented factory pattern
       - Added comprehensive test suite
       - Created usage examples
+
 - [x] 1.10 Create utility functions for data validation and visualization
       - Implemented ValidationUtils for validating data files and directories
       - Created FieldValidators for type-specific validation and normalization
@@ -58,6 +59,7 @@ Section completed with all requirements satisfied and following architectural pr
       - Documented validation strategies and visualization approaches
       - Applied interface-based design with BaseValidator abstract class
       - Fixed test configuration issues to ensure test suite passes
+      
 - [x] 1.11 Write data loading notebook to verify data pipeline works correctly
       - Implemented data_loading_verification.ipynb with proper project setup
       - Verified DataLoader factory instantiation
@@ -66,9 +68,16 @@ Section completed with all requirements satisfied and following architectural pr
       - Demonstrated data format integrity and pipeline operations
       - Generated summary statistics for dataset exploration
 
-## Phase 2: Model Framework ✓
+Section completed with all requirements satisfied and following architectural principles:
+- Interface-based design
+- Dependency injection
+- Comprehensive testing
+- Clear separation of concerns
+- Proper data validation and integrity checks
 
-### 2.A: Base Framework ✓
+## Phase 2: Model Integration
+
+### 2.A: Model Framework
 - [x] 2.1 Define BaseModel abstract class with standard interface
       - Implemented with proper interface-based design
       - Added comprehensive test suite (83% coverage)
@@ -93,7 +102,7 @@ Section completed with all requirements satisfied and following architectural pr
       - Integrated with field validators for type-specific normalization
       - Robust error handling with custom exceptions
       - Follows dependency injection pattern
-- [x] 2.4 Implement error handling for model loading and inference
+- [ ] 2.4 Implement error handling for model loading and inference
 - [x] 2.5 Create model configuration validation utilities
       - Designed and implemented ValidationResult class for standardized results
       - Created ModelConfigValidator interface for consistent validation pattern
@@ -103,49 +112,38 @@ Section completed with all requirements satisfied and following architectural pr
       - Documented design decisions in ADR-006
       - Applied proper error handling with specific error types
       - Follows interface-based design principles
-- [x] 2.6 Enhance dependency injection patterns for model components
-      - [x] Review existing DI implementation from Phase 1
-      - [x] Remove global state from configuration system
-      - [x] Implement proper constructor-based DI
-      - [x] Ensure type definitions are properly separated
-      - [x] Create dependency graph documentation
+- [ ] 2.6 Enhance dependency injection patterns for model components
+      - Review existing DI implementation from Phase 1
+      - Apply consistent DI patterns to model components
+      - Document component relationships and dependencies
+      - Create comprehensive test suite using DI for mocking
+      - See di-improvement-tasks.md for detailed sub-tasks
 
-## Phase 3: Prompt Management (Local Development)
+### 2.B: Model Implementations
+- [ ] 2.7 Implement PixtralModel class for Pixtral-12B model
+- [ ] 2.8 Implement LlamaVisionModel class for Llama-3.2-11B-Vision model
+- [ ] 2.9 Implement DoctrModel class for Doctr model
+- [ ] 2.10 Create model-specific output parsing functions
+- [ ] 2.11 Write model loading notebook to verify model framework works correctly
+
+## Phase 3: Prompt Management
 
 ### 3.A: Prompt Framework
-- [x] 3.1 Implement BasePromptGenerator interface
-- [x] 3.2 Create PromptFactory with proper test isolation and validation
+- [ ] 3.1 Define BasePromptGenerator abstract class with standard interface
+- [ ] 3.2 Implement PromptFactory for creating prompt generators
 - [ ] 3.3 Create PromptFormatter for model-specific prompt formatting
-- [ ] 3.4 Implement remaining prompt strategies:
-  - [ ] DetailedPromptGenerator
-  - [ ] FewShotPromptGenerator
-  - [ ] StepByStepPromptGenerator
-  - [ ] LocationalPromptGenerator
-  - [ ] TemplatePromptGenerator
-- [ ] 3.5 Add comprehensive prompt validation:
-  - [x] Work order format validation
-  - [x] Cost format validation
-  - [ ] Template validation
-  - [ ] Example validation
-- [ ] 3.6 Implement prompt caching system
-- [ ] 3.7 Add performance benchmarks for prompt generation
+- [ ] 3.4 Implement prompt template loading and validation
+- [ ] 3.5 Create utility functions for prompt visualization
 
 ### 3.B: Prompt Implementations
-- [x] 3.6 Implement BasicPromptGenerator for direct extraction prompts
-      - Created with interface-based design
-      - Added comprehensive test suite (96% coverage)
-      - Implemented template caching for performance
-      - Added field-specific format instructions
-      - Robust error handling with custom exceptions
-      - Proper cleanup of resources
-      - Follows dependency injection pattern
+- [ ] 3.6 Implement BasicPromptGenerator for direct extraction prompts
 - [ ] 3.7 Implement DetailedPromptGenerator for detailed instruction prompts
 - [ ] 3.8 Implement FewShotPromptGenerator for few-shot example prompts
 - [ ] 3.9 Implement StepByStepPromptGenerator for guided extraction prompts
 - [ ] 3.10 Implement LocationalPromptGenerator for spatial location prompts
 - [ ] 3.11 Write prompt testing notebook to verify prompt framework works correctly
 
-## Phase 4: Evaluation Framework (Local Development)
+## Phase 4: Evaluation Framework
 
 ### 4.A: Evaluation Components
 - [ ] 4.1 Implement MetricsCalculator for accuracy and CER metrics
@@ -161,72 +159,86 @@ Section completed with all requirements satisfied and following architectural pr
 - [ ] 4.9 Create utility functions for error analysis
 - [ ] 4.10 Write evaluation testing notebook to verify metrics calculation
 
-## Phase 5: Templates and Infrastructure (Local Development)
+## Phase 5: Integration and Initial Testing
 
-### 5.A: Experiment Template Framework
+### 5.A: Experiment Notebook Template
 - [ ] 5.1 Create experiment_template.ipynb with standardized structure
-- [ ] 5.2 Implement end-to-end workflow template
+- [ ] 5.2 Implement end-to-end workflow in template
 - [ ] 5.3 Add configuration options and parameter selection
 - [ ] 5.4 Create basic result visualization in notebook
+- [ ] 5.5 Test template with a single model/prompt combination
 
-### 5.B: Analysis Infrastructure
-- [ ] 5.5 Create results_analysis.ipynb structure for aggregating results
-- [ ] 5.6 Implement result loading and merging functions
-- [ ] 5.7 Create comparative visualization templates
-- [ ] 5.8 Implement error analysis component templates
+### 5.B: Analysis Notebook
+- [ ] 5.6 Create results_analysis.ipynb for aggregating results
+- [ ] 5.7 Implement result loading and merging functions
+- [ ] 5.8 Create comparative visualizations across models and prompts
+- [ ] 5.9 Implement error analysis components
+- [ ] 5.10 Test analysis notebook with sample results
 
-## Phase 6: Model Implementations (Cloud Development)
+## Phase 6: MVP Evaluation
 
-### 6.A: Model Implementation
-- [ ] 6.1 Set up cloud development environment with GPU support
-- [ ] 6.2 Implement PixtralModel class for Pixtral-12B model
-- [ ] 6.3 Implement LlamaVisionModel class for Llama-3.2-11B-Vision model
-- [ ] 6.4 Implement DoctrModel class for Doctr model
-- [ ] 6.5 Create model-specific output parsing functions
-- [ ] 6.6 Write model loading notebook to verify model framework works correctly
+### 6.A: Initial Model Experiments
+- [ ] 6.1 Create experiment notebooks for Pixtral-12B with different prompts
+- [ ] 6.2 Create experiment notebooks for Llama-3.2-11B-Vision with different prompts
+- [ ] 6.3 Create experiment notebooks for Doctr with different prompts
+- [ ] 6.4 Run experiments on initial 20-image dataset
+- [ ] 6.5 Collect and save results from all experiments
 
-### 6.B: Initial Model Testing
-- [ ] 6.7 Test experiment template with Pixtral-12B
-- [ ] 6.8 Test experiment template with Llama-3.2-11B-Vision
-- [ ] 6.9 Test experiment template with Doctr
-- [ ] 6.10 Verify end-to-end workflow with small dataset
+### 6.B: Initial Analysis and Refinement
+- [ ] 6.6 Run analysis notebook on initial results
+- [ ] 6.7 Identify and fix any issues with models or prompts
+- [ ] 6.8 Refine evaluation metrics if needed
+- [ ] 6.9 Document initial findings and observations
+- [ ] 6.10 Prepare for expanded evaluation
 
-## Phase 7: MVP Evaluation (Cloud Development)
+## Phase 7: Expanded Evaluation
 
-### 7.A: Initial Model Experiments
-- [ ] 7.1 Run experiments with Pixtral-12B using different prompts
-- [ ] 7.2 Run experiments with Llama-3.2-11B-Vision using different prompts
-- [ ] 7.3 Run experiments with Doctr using different prompts
-- [ ] 7.4 Run experiments on initial 20-image dataset
-- [ ] 7.5 Collect and save results from all experiments
+### 7.A: Full Dataset Experiments
+- [ ] 7.1 Expand dataset to ~150 images
+- [ ] 7.2 Update ground truth validation for expanded dataset
+- [ ] 7.3 Run experiments with best-performing model/prompt combinations
+- [ ] 7.4 Collect and save results from expanded experiments
+- [ ] 7.5 Verify result consistency across dataset sizes
 
-### 7.B: Initial Analysis and Refinement
-- [ ] 7.6 Run analysis notebook on initial results
-- [ ] 7.7 Identify and fix any issues with models or prompts
-- [ ] 7.8 Refine evaluation metrics if needed
-- [ ] 7.9 Document initial findings and observations
-- [ ] 7.10 Prepare for expanded evaluation
+### 7.B: Final Analysis and Documentation
+- [ ] 7.6 Run analysis notebook on full results
+- [ ] 7.7 Create comprehensive performance comparisons
+- [ ] 7.8 Identify best-performing model/prompt combination
+- [ ] 7.9 Document findings and recommendations
+- [ ] 7.10 Prepare final presentation materials
 
-## Phase 8: Expanded Evaluation (Cloud Development)
+## Implementation Priorities
 
-### 8.A: Full Dataset Experiments
-- [ ] 8.1 Expand dataset to ~150 images
-- [ ] 8.2 Update ground truth validation for expanded dataset
-- [ ] 8.3 Run experiments with best-performing model/prompt combinations
-- [ ] 8.4 Collect and analyze full results
-- [ ] 8.5 Generate final comparison report
+1. **Core Framework First**: Build the foundational components before specific implementations
+2. **One Working Example**: Get a single model/prompt combination working end-to-end before adding more
+3. **Incremental Testing**: Test each component individually before integration
+4. **Documentation As You Go**: Document each component as it's implemented
+5. **Small, Focused Tasks**: Keep implementation tasks small and focused for easier LLM prompting
 
-## Implementation Notes
+## Implementation Notes for LLM Prompting
 
-1. **Local Development First**: Phases 3-5 can be completed entirely locally, maximizing development efficiency
-2. **Infrastructure Before Implementation**: Build and test all frameworks before moving to model implementation
-3. **Cloud Resource Optimization**: Cloud-dependent tasks are grouped to minimize resource usage
-4. **Testing Strategy**: Each component can be tested independently with mock data
-5. **Cost Efficiency**: Delays cloud resource usage until absolutely necessary
+When prompting an LLM to implement a task:
 
-When implementing tasks:
-1. Follow architectural principles from Phase 1
-2. Maintain comprehensive test coverage
-3. Document all major decisions
-4. Use interface-based design consistently
-5. Follow dependency injection patterns
+1. Provide the exact class name and file location
+2. Reference relevant project rules (naming conventions, etc.)
+3. Specify required methods and interfaces
+4. Include example usage if helpful
+5. Mention dependencies and relationships with other components
+6. Request proper documentation and error handling
+
+Example prompt format:
+```
+Implement the ConfigLoader class in src/config/config_loader.py according to the project rules.
+This class should load and validate YAML configuration files.
+
+Required methods:
+- __init__(self, config_path)
+- load(self) -> Config
+- validate(self, config) -> bool
+
+Dependencies:
+- Uses PyYAML for loading YAML files
+- Returns appropriate Config objects (ModelConfig, PromptConfig, etc.)
+
+Include proper error handling and documentation.
+```

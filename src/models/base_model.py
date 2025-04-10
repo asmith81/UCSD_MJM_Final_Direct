@@ -19,17 +19,32 @@ from .model_errors import (
     ModelTimeoutError
 )
 
+# Deprecated but kept for backward compatibility, use the ones from model_errors instead
+class ModelInitializationError(ModelInitializationError):
+    """Raised when a model fails to initialize properly."""
+    pass
+
+# Deprecated but kept for backward compatibility, use the ones from model_errors instead
+class ModelProcessingError(ModelProcessingError):
+    """Raised when a model fails to process an image."""
+    pass
+
+
 class BaseModel(ABC):
     """Abstract base class for all model implementations.
     
     This class defines the interface that all model implementations must follow.
-    It provides a standard contract for model initialization and image processing.
+    Models are responsible for:
+    1. Initializing with configuration
+    2. Processing invoice images
+    3. Returning structured results
+    4. Managing their own resources
     
-    All implementations must properly handle:
-    - Resource management (loading/unloading)
-    - Error recovery and cleanup
-    - Timeouts for operations
-    - Input validation
+    Implementations should:
+    - Handle their own resource management
+    - Implement proper error handling
+    - Clean up resources when errors occur
+    - Validate inputs before processing
     """
     
     @abstractmethod
@@ -48,6 +63,7 @@ class BaseModel(ABC):
             ModelInitializationError: If initialization fails due to general issues
             ModelConfigError: If configuration is invalid or insufficient
             ModelResourceError: If required resources cannot be loaded or accessed
+            ValueError: If configuration is invalid (deprecated, use ModelConfigError instead)
         """
         pass
         
@@ -73,6 +89,7 @@ class BaseModel(ABC):
             ModelResourceError: If required resources are unavailable during processing
             ModelTimeoutError: If processing exceeds time limits
             FileNotFoundError: If image file doesn't exist
+            ValueError: If image is invalid (deprecated, use ModelInputError instead)
         """
         pass
         
@@ -93,5 +110,6 @@ class BaseModel(ABC):
             
         Raises:
             ModelConfigError: If configuration is invalid with detailed message
+            ValueError: If configuration is invalid (deprecated, use ModelConfigError instead)
         """
         pass

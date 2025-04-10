@@ -5,8 +5,8 @@ import pytest
 from unittest.mock import Mock, patch
 
 from src.models.model_factory import ModelFactory, ModelCreationError
-from src.models.base_model import BaseModel
-from src.models.model_errors import ModelInitializationError, ModelConfigError
+from src.models.base_model import BaseModel, ModelInitializationError
+from src.models.model_errors import ModelConfigError
 from src.config.base_config import BaseConfig
 from src.config import ConfigType
 from src.config.implementations.model_config import ModelConfig
